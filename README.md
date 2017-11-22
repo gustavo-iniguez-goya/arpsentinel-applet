@@ -27,10 +27,18 @@ WIP
   2. Check out if the dbus service is running: `ps ax|grep arpalert-service`
   3. Send a message to the applet:
     - `qdbus --system org.arpsentinel /org/arpsentinel sendAlert "1" "2" "3" "4" "5" "6"`
+
+* Gathering logs:
+  - Press _ALT+F2_ and type _lg_
+  - Press Windows key + l, and select the extension tab.
 ----
 
 ## List of useful resources to start hacking cinnamon/gnome applets or extensions
 ### Documentation
+- https://mathematicalcoffee.blogspot.com.es/2012/09/gnome-shell-extensions-getting-started.html
+- http://mathematicalcoffee.blogspot.it/2012/09/gnome-shell-javascript-source.html
+- https://www.abidibo.net/blog/2016/03/02/how-i-developed-my-first-gnome-shell-extension/
+- https://blog.fpmurphy.com/2011/04/gnome-3-shell-extensions.html
 - http://developer.linuxmint.com/reference/git/cinnamon-tutorials/write-applet.html
 - https://people.gnome.org/~gcampagna/docs/GLib-2.0/index.html
 - https://people.gnome.org/~gcampagna/docs/Gio-2.0/index.html
