@@ -1,0 +1,7 @@
+{
+    "description": "Applet for display ARP warnings, using the arpalert daemon", 
+    "dangerous": false, 
+    "name": "ARP Sentinel", 
+    "uuid": "arpsentinel@arpsentinel-applet.github.io",
+    "icon": "security-high"
+}

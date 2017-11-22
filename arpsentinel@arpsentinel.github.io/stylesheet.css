@@ -1,0 +1,40 @@
+
+.helloworld-label {
+    font-size: 26px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: rgba(10,10,10,0.7);
+    border-radius: 5px;
+    padding: .5em;
+}
+
+.panel-text {
+    font-size: 14px;
+    color: #000000;
+    font-weight: bold;
+}
+
+.blinking-alert-on {
+    background-color: red;
+    color: #fff;
+    border-radius: 15px;
+}
+
+.blinking-alert-off {
+    background-color: rgb(255, 97, 97);
+    color: #fff;
+    border-radius: 15px;
+}
+
+.badge {
+    font-size: 10px;
+}
+
+.run-dialog{
+}
+
+.run-dialog-label{
+}
+
+.run-dialog-error-box{
+}
