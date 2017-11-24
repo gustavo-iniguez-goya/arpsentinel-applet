@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=org.arpsentinel
-Exec="~/.local/share/cinnamon/applets/arpsentinel@arpsentinel-applet.github.io/bin/arpalert-service.py"
+Exec="~/.arpsentinel-applet/bin/arpalert-service.py"
 User=arpalert

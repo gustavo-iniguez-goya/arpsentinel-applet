@@ -15,7 +15,10 @@
     You should have received a copy of the GNU General Public License
  */
 
+const GLib = imports.gi.GLib;
+
 const AppletUUID = 'arpsentinel@arpsentinel-applet.github.io';
+const AppletName = 'arpsentinel-applet';
 
 const SIGNAL_EVENTS_METHOD      =   'getAlert';
 
@@ -45,8 +48,8 @@ const PREF_ALERT_MAC_EXPIRED   = 'alert_mac_expired';
 
 const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
 const ARPSENTINEL_HOME = AppletDir + '/data';
-const MACLIST_BL = ARPSENTINEL_HOME + '/maclist.deny';
-const MACLIST_WL = ARPSENTINEL_HOME + '/maclist.allow';
+const MACLIST_BL = GLib.get_home_dir() + '/.' + AppletName +'/maclist.deny';
+const MACLIST_WL = GLib.get_home_dir() + '/.'+ AppletName + '/maclist.allow';
 const MACLIST_TRUSTED = ARPSENTINEL_HOME + '/maclist.trusted';
 
 const ALERT_IP_CHANGE =     '0';
