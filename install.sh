@@ -11,7 +11,7 @@ error(){
 
 mkdir -p ~/.$APP_HOME/bin/ 2>/dev/null
 touch ~/.$APP_HOME/maclist.allow ~/.$APP_HOME/maclist.deny ~/.$APP_HOME/maclist.trusted
-cp ./arpalert-service.py ~/.$APP_HOME/bin/ ./arpalert.sh ~/.$APP_HOME/bin/
+/bin/cp ./arpalert-service.py ./arpalert.sh ~/.$APP_HOME/bin/
 
 #chown arpalert ~/.$APP_HOME/maclist.allow ~/.$APP_HOME/maclist.deny
 #[ "$?" != "0" ] || error "You must install arpalert: sudo apt-get install arpalert, sudo dnf install arpalert, etc"
