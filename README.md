@@ -7,14 +7,17 @@ WIP
 - `apt-get install arpalert`
 - `git clone ...`
 - `cd arpsentinel-applet`
-- `cp -a arpsentinel@arpsentinel.github.io/ ~/.local/share/cinnamon/applets/`
-- `sudo cp arpalert.service /usr/share/dbus-1/system-services/org.arpsentinel.service`
+- `cp -a arpsentinel@arpsentinel-applet.github.io/ ~/.local/share/cinnamon/applets/`
+- `mkdir -p ~/.arpsentinel-applet/bin/`
+- `touch ~/.arpsentinel-applet/maclist.allow ~/.arpsentinel-applet/maclist.deny`
+- `cp arpalert-service.py arpalert.sh ~/.arpsentinel-applet/bin/`
+- `sudo cp arpalert.service /usr/share/dbus-1/system-services/org.arpsentinel.service` (modify the user's home path in Exec=)
 - `sudo cp arpsentinel.conf /etc/dbus-1/system.d/`
 - modify the following options of /etc/arpalert/arpalert.conf:
-  - maclist file = "~/.local/share/cinnamon/applets/arpsentinel@arpsentinel.github.io/data/maclist.allow"
-  - maclist alert file = "~/.local/share/cinnamon/applets/arpsentinel@arpsentinel.github.io/data/maclist.deny"
-  - maclist leases file = "~/.local/share/cinnamon/applets/arpsentinel@arpsentinel.github.io/data/arpalert.leases"
-  - action on detect = "~/.local/share/cinnamon/applets/arpsentinel@arpsentinel.github.io//bin/arpalert.sh"
+  - maclist file = "~/.arpsentinel-applet/maclist.allow"
+  - maclist alert file = "~/.arpsentinel-applet/maclist.deny"
+  - maclist leases file = "~/.arpsentinel-applet/arpalert.leases"
+  - action on detect = "~/.arpsentinel-applet/bin/arpalert.sh"
 
 - Add the applet to the panel: right click on the cinnamon panel -> Add applets to the panel -> ARP Sentinel
 
@@ -33,9 +36,14 @@ WIP
   3. Send a message to the applet:
     - `qdbus --system org.arpsentinel /org/arpsentinel sendAlert "1" "2" "3" "4" "5" "6"`
 
-* Gathering logs:
+* The applet fails to load
+  - Check out that the DBUS Service is running (`ps ax|grep arpalert-service`).
+  - If it's not, launch it manually (`~/.arpsentinel-applet/bin/arpalert-service.py`) and add the applet afterwards.
+
+* Gathering logs when reporting an issue:
   - Press _ALT+F2_ and type _lg_
   - Press Windows key + l, and select the extension tab.
+  - `tail -f ~/.cinnamon/glass.log`
 ----
 
 ## List of useful resources to start hacking cinnamon/gnome applets or extensions
