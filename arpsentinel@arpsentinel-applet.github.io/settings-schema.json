@@ -5,9 +5,13 @@
     },
     
     "max_devices" : {
-        "type" : "entry",
+        "type" : "spinbutton",
         "description" : "Alert me if there're more than these devices in the lan",
-        "default" : "3",
+        "default" : 5,
+        "min": 0,
+        "max": 2048,
+        "step": 1,
+        "value": 5,
         "tooltip" : "0 disables the alert" 
     },
 
@@ -18,13 +22,14 @@
     },
 
     "https_interval" : {
-        "type" : "scale",
-        "description" : "Seconds between checks (use the < arrows > or the mouse wheel to fine-tune the value)",
+        "type" : "spinbutton",
+        "description" : "Seconds between checks",
+        "dependency": "check_https",
         "min": 10,
-        "max": 1000,
+        "max": 3600,
         "step": 1,
-        "default" : 20,
-        "value": 20,
+        "default" : 60,
+        "value": 60,
         "tooltip" : ""
     },
 
