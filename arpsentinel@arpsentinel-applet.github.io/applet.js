@@ -751,14 +751,14 @@ ARPSentinelApplet.prototype = {
      * Adds a new device to the list
      */
     add_device: function(dev){
-        if (this.macs.length > 0 && this.macs.length > this.pref_max_devices){
+        if (this.macs.length > 0 && (this.macs.length+1) > this.pref_max_devices){
             this.show_notification('WARNING! Too many devices detected on the LAN',
                 'Max devices configured: ' + this.pref_max_devices
                 + '\nDevice detected:'
-                + '\nMAC: ' + dev.mac
-                + '\nIP: ' + dev.ip
-                + '\nDEVICE: ' + dev.device
-                + '\nVENDOR: ' + dev.vendor
+                + '\n\tMAC: ' + dev.mac
+                + '\n\tIP: ' + dev.ip
+                + '\n\tDEVICE: ' + dev.device
+                + '\n\tVENDOR: ' + dev.vendor
                 + '\n\nLaunch wireshark and see what\'s going on.', 'dialog-warning',
                 Tray.Urgency.CRITICAL);
         }
