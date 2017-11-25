@@ -99,7 +99,7 @@ const ArpSentinelService = new Lang.Class({
     Name: 'ArpSentinelService',
 
     _init: function() {
-        global.log('ArpSentinelService.init()')
+        //global.log('ArpSentinelService.init()')
 
         this.ADProxy = new ARPSentinelProxy(
                     Gio.DBus.system,
@@ -113,7 +113,7 @@ const ArpSentinelService = new Lang.Class({
         this._signalId = this.ADProxy.connectSignal(Constants.SIGNAL_EVENTS_METHOD, 
             Lang.bind(this, function(proxy, senderName, 
                 [mac_orig, ip_orig, x, device, alert_type, mac_vendor]) {
-                global.log('New alert. mac: ' + mac_orig + ' ip: ' + ip_orig + ' device: ' + device + ' type: ' + alert_type + ' vendor: ' + mac_vendor);
+                //global.log('New alert. mac: ' + mac_orig + ' ip: ' + ip_orig + ' device: ' + device + ' type: ' + alert_type + ' vendor: ' + mac_vendor);
                     var data = {
                         mac: mac_orig, 
                         ip: ip_orig, 
@@ -135,11 +135,11 @@ const ArpSentinelService = new Lang.Class({
 
     setAlertText: function(data, pos) {
         if (pos !== -1){
-            global.log('YYY alert dupe: ' + pos);
+            //global.log('YYY alert dupe: ' + pos);
             return;
         }
         var _icon = 'security-low';
-        global.log('YYY alert index: ' + pos);
+        //global.log('YYY alert index: ' + pos);
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -217,7 +217,7 @@ const ArpSentinelService = new Lang.Class({
     },
 
     destroy: function(){
-        global.log('ARP Sentinel Service destroyed');
+        //global.log('ARP Sentinel Service destroyed');
         this.ADProxy.disconnect(this.ADProxy._signalId);
         Signals._disconnectAll.apply(this.ADProxy);
         this.ADProxy = null;
@@ -353,11 +353,11 @@ ARPSentinelApplet.prototype = {
                 // pref_https_interval is an entry widget, thus it expects strings, not integer.
                 // kontuz here, because if we save integer values, the options window does not show up.
                 this.pref_https_interval = interval;
-                global.log('HTTPS INTERVAL: ' + interval);
+                //global.log('HTTPS INTERVAL: ' + interval);
                 if (this.pref_check_https === true){
                     this._remove_https_monitor();
                     this._start_monitoring_https();
-                    global.log('HTTPS INTERVAL UPDATED');
+                    //global.log('HTTPS INTERVAL UPDATED');
                 }
             }));
 
@@ -366,7 +366,7 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_HTTPS_DOMAINS,
             "pref_https_domains",
             Lang.bind(this, function(_text){
-                global.log('DOMAINSSS: ' + _text);
+                //global.log('DOMAINSSS: ' + _text);
                 this.pref_https_domains = _text;
             }));
 
@@ -445,7 +445,7 @@ ARPSentinelApplet.prototype = {
         this.menuHttps = new PopupMenu.PopupSwitchIconMenuItem("Monitor if you're being spied", false, "changes-prevent", St.IconType.FULLCOLOR);
         this.menuHttps.connect('toggled', Lang.bind(this, function(_item, state) {
             this.pref_check_https = state;
-            global.log('DOMAINS: ' + this.pref_https_domains);
+            //global.log('DOMAINS: ' + this.pref_https_domains);
             if (state === true){
                 _item.setIconName('changes-prevent');
                 this._start_monitoring_https();
@@ -577,7 +577,7 @@ ARPSentinelApplet.prototype = {
         // TODO: add net-tools -> scan host, nuke host, block host, etc...
 
         if (this.pref_hardening_mode === true){
-            global.log('add_alert, auto blacklisting mac: ' + data.mac);
+            //global.log('add_alert, auto blacklisting mac: ' + data.mac);
             Actions.add_blacklist_mac(data, false);
         }
     },
@@ -603,19 +603,19 @@ ARPSentinelApplet.prototype = {
      * Start monitoring https SSL certs every n seconds.
      */
     _start_monitoring_https: function(){
-        global.log('_start_https_monitor()');
+        //global.log('_start_https_monitor()');
         if (this.pref_check_https === true){
             this._https_interval_timeout_id = Mainloop.timeout_add_seconds(this.pref_https_interval, Lang.bind(this, this._check_https_integrity));
         }
     },
 
     _remove_https_monitor: function(){
-        global.log('_remove_https_monitor()');
+        //global.log('_remove_https_monitor()');
         Mainloop.source_remove(this._https_interval_timeout_id);
     },
 
     _check_https_integrity: function(app){
-        global.log('check_https_integrity()');
+        //global.log('check_https_integrity()');
         if (this.pref_check_https === true){
             let checker = new Spawn.SpawnReader();
             let fb_fingerprint = 'SHA1 Fingerprint=93:6F:91:2B:AF:AD:21:6F:A5:15:25:6E:57:2C:DC:35:A1:45:1A:A5';
@@ -631,10 +631,10 @@ ARPSentinelApplet.prototype = {
                 checker.spawn('./', openssl_cmd, GLib.SpawnFlags.SEARCH_PATH, (line) => {
                     // XXX: == is typed intentionally
                     if (line == d[1]){
-                        global.log('HTTP OK');
+                        //global.log('HTTP OK');
                     }
                     else{
-                        global.log('HTTP K.O.');
+                        //global.log('HTTP K.O.');
                         this.set_icon('dialog-warning');
                         // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
                         this.show_notification('WARNING!',
@@ -652,7 +652,7 @@ ARPSentinelApplet.prototype = {
             return true;
         }
         else{
-            global.log('check_https_integrity() false, stopping');
+            //global.log('check_https_integrity() false, stopping');
             return false;
         }
     },
@@ -767,7 +767,7 @@ ARPSentinelApplet.prototype = {
     },
 
     destroy: function(){
-        global.log('ARP Sentinel applet destroyed');
+        //global.log('ARP Sentinel applet destroyed');
         this.pref_check_https = false;
         this.macs = [];
         this.macs_trusted = [];
@@ -780,15 +780,15 @@ ARPSentinelApplet.prototype = {
 
 var arpSentinel = null;
 function main(metadata, orientation, panel_height, instance_id) {
-    global.log('ARPSentinel ready');
+    //global.log('ARPSentinel ready');
     arpSentinel = new ARPSentinelApplet(metadata, orientation, panel_height, instance_id);
     return arpSentinel;
 }
 
 function enable(){
-    global.log('ARP Sentinel enabled');
+    //global.log('ARP Sentinel enabled');
 }
 
 function disable(){
-    global.log('ARP Sentinel disabled');
+    //global.log('ARP Sentinel disabled');
 }
