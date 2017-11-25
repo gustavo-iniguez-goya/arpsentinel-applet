@@ -29,7 +29,7 @@
         "editable": "true",
         "cursor-visible": "true",
         "description": "List of domains and their fingerprint, separated by a space",
-        "default": "www.facebook.com 93:6F:91:2B:AF:AD:21:6F:A5:15:25:6E:57:2C:DC:35:A1:45:1A:A5\nwww.github.com D7:9F:07:61:10:B3:92:93:E3:49:AC:89:84:5B:03:80:C1:9E:2F:8B\nwww.google.com B7:4E:F0:5C:64:18:08:E4:D3:29:D3:36:03:B4:89:A9:24:26:44:7C\nwww.strava.com 78:7C:22:62:BF:73:0B:AC:99:3A:F3:6E:1B:EE:5E:D9:B8:1A:68:64\nwww.twitter.com D1:D1:93:3E:21:98:81:20:2F:69:FA:FC:A8:98:BC:EB:3C:61:20:39",
+        "default": "www.facebook.com 93:6F:91:2B:AF:AD:21:6F:A5:15:25:6E:57:2C:DC:35:A1:45:1A:A5\nwww.github.com D7:9F:07:61:10:B3:92:93:E3:49:AC:89:84:5B:03:80:C1:9E:2F:8B\nwww.strava.com 78:7C:22:62:BF:73:0B:AC:99:3A:F3:6E:1B:EE:5E:D9:B8:1A:68:64\nwww.twitter.com D1:D1:93:3E:21:98:81:20:2F:69:FA:FC:A8:98:BC:EB:3C:61:20:39",
         "tooltip": "",
         "dependency": "check_https"
     },
