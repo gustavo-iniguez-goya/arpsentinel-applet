@@ -275,6 +275,7 @@ ARPSentinelApplet.prototype = {
         this.pref_check_https = null;
         this.pref_https_interval = 10;
         this.pref_https_domains = null;
+        this._https_interval_timeout_id = null;
         // TODO: reset macs/alerts on net wakeup
         // this.pref_reset_on_wakeup = true;
         // TODO: allow to only display certain alerts
@@ -336,14 +337,28 @@ ARPSentinelApplet.prototype = {
             Settings.BindingDirection.BIDRECTIONAL,
             Constants.PREF_CHECK_HTTPS,
             "pref_check_https",
-            emptyCallback);
+            Lang.bind(this, function(state){
+                this.pref_check_https = state;
+                this.menuHttps.toggle();
+            }));
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
             Constants.PREF_HTTPS_INTERVAL,
             "pref_https_interval",
             Lang.bind(this, function(interval){
+                if (this.pref_check_https === false || interval === '' || interval === undefined || interval < 10 || interval === this.pref_https_interval){
+                    return;
+                }
+                // pref_https_interval is an entry widget, thus it expects strings, not integer.
+                // kontuz here, because if we save integer values, the options window does not show up.
+                this.pref_https_interval = interval;
                 global.log('HTTPS INTERVAL: ' + interval);
+                if (this.pref_check_https === true){
+                    this._remove_https_monitor();
+                    this._start_monitoring_https();
+                    global.log('HTTPS INTERVAL UPDATED');
+                }
             }));
 
         this.settings.bindProperty(
@@ -427,19 +442,20 @@ ARPSentinelApplet.prototype = {
      *
      */
     _add_sticky_menus: function(){
-        let itHttps = new PopupMenu.PopupSwitchIconMenuItem("Monitor if you're being spied", false, "changes-prevent", St.IconType.FULLCOLOR);
-        itHttps.connect('toggled', Lang.bind(this, function(_item, state) {
+        this.menuHttps = new PopupMenu.PopupSwitchIconMenuItem("Monitor if you're being spied", false, "changes-prevent", St.IconType.FULLCOLOR);
+        this.menuHttps.connect('toggled', Lang.bind(this, function(_item, state) {
             this.pref_check_https = state;
-            global.log('DOMAINSSSSS: ' + this.pref_https_domains);
+            global.log('DOMAINS: ' + this.pref_https_domains);
             if (state === true){
                 _item.setIconName('changes-prevent');
-                Mainloop.timeout_add_seconds(this.pref_https_interval, Lang.bind(this, this._check_https_integrity));
+                this._start_monitoring_https();
             }
             else{
+                this._remove_https_monitor();
                 _item.setIconName('changes-allow');
             }
         }));
-        this.menu.addMenuItem(itHttps, 0);
+        this.menu.addMenuItem(this.menuHttps, 0);
 
         let itPrefs = new PopupMenu.PopupSwitchMenuItem("Auto blacklist non whitelisted MACs", true);
         itPrefs.connect('toggled', Lang.bind(this, function(_item, state) {
@@ -581,6 +597,21 @@ ARPSentinelApplet.prototype = {
         }
 
         return true;
+    },
+
+    /**
+     * Start monitoring https SSL certs every n seconds.
+     */
+    _start_monitoring_https: function(){
+        global.log('_start_https_monitor()');
+        if (this.pref_check_https === true){
+            this._https_interval_timeout_id = Mainloop.timeout_add_seconds(this.pref_https_interval, Lang.bind(this, this._check_https_integrity));
+        }
+    },
+
+    _remove_https_monitor: function(){
+        global.log('_remove_https_monitor()');
+        Mainloop.source_remove(this._https_interval_timeout_id);
     },
 
     _check_https_integrity: function(app){

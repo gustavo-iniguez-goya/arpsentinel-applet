@@ -18,9 +18,13 @@
     },
 
     "https_interval" : {
-        "type" : "entry",
-        "description" : "Seconds between checks",
-        "default" : "10",
+        "type" : "scale",
+        "description" : "Seconds between checks (use the < arrows > or the mouse wheel to fine-tune the value)",
+        "min": 10,
+        "max": 1000,
+        "step": 1,
+        "default" : 20,
+        "value": 20,
         "tooltip" : ""
     },
 
