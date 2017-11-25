@@ -386,9 +386,13 @@ ARPSentinelApplet.prototype = {
 
     show_notification: function(title, body, iname, urgency){
         let not = new Tray.Notification(this._notif_src, title, body, 
-            { icon:  new St.Icon({ icon_name: iname,
+            {
+                bodyMarkup: true,
+                bannerMarkup: true,
+                icon:  new St.Icon({ icon_name: iname,
                              icon_type: St.IconType.SYMBOLIC,
-                             icon_size: 24 }) });
+                             icon_size: 24 })
+            });
         // make the notification not auto hide
         not.setUrgency(urgency);
         this._notif_src.notify(not);
@@ -449,6 +453,7 @@ ARPSentinelApplet.prototype = {
             this._add_sticky_menus();
             this.alerts = [];
             this.macs = [];
+            this.set_text("0 devices");
         }));
         this.menu.addMenuItem(itReset, 2);
 
@@ -600,8 +605,10 @@ ARPSentinelApplet.prototype = {
                     else{
                         global.log('HTTP K.O.');
                         this.set_icon('dialog-warning');
-                        this.show_notification('WARNING! Your communications might be being intercepted',
-                            d[0] + ' fingerprint obtained:\n ' + line
+                        // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
+                        this.show_notification('WARNING!',
+                            '<b>Your communications might be being intercepted</b>\n\n'
+                            + d[0] + ' fingerprint obtained:\n ' + line
                             + '\n' + d[0] + ' fingerprint saved:\n ' + d[1]
                             + '\n\nCheck it out, and reenable the check again.', 'dialog-warning',
                             Tray.Urgency.CRITICAL);
