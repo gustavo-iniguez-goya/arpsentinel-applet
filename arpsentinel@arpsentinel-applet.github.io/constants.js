@@ -31,6 +31,7 @@ const POLICY_IGNORE_MAC_CHANGE  =   'mac_change';
 
 const PREF_HARDENING_MODE   = 'hardening_mode';
 const PREF_MAX_DEVICES      = 'max_devices';
+const PREF_MAX_ITEMS_IN_LIST = 'max_items_in_list';
 const PREF_CHECK_HTTPS      = 'check_https';
 const PREF_HTTPS_INTERVAL   = 'https_interval';
 const PREF_HTTPS_DOMAINS    = 'https_domains';

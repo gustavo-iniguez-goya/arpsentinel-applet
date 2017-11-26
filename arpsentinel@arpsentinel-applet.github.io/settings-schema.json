@@ -56,6 +56,17 @@
         "tooltip" : ""
     },
 
+    "max_items_in_list" : {
+        "type" : "spinbutton",
+        "description" : "Max number of items in the devices list",
+        "min": 0,
+        "max": 20,
+        "step": 1,
+        "default" : 20,
+        "value": 20,
+        "tooltip" : ""
+    },
+
     "head_alerts": {
         "type": "header",
         "description": "Choose what alerts to display"

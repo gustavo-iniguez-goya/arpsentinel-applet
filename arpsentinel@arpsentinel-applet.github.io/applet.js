@@ -137,10 +137,6 @@ const ArpSentinelService = new Lang.Class({
     },
 
     setAlertText: function(data, pos) {
-        if (pos !== -1){
-            //global.log('YYY alert dupe: ' + pos);
-            return;
-        }
         var _icon = 'security-low';
         //global.log('YYY alert index: ' + pos);
         
@@ -270,6 +266,7 @@ ARPSentinelApplet.prototype = {
         
         this.settings = new Settings.AppletSettings(this, metadata.uuid, instance_id);
         this.pref_max_devices = null;
+        this.pref_max_items_in_list = 20;
         this.pref_hardening_mode = null;
         this.pref_block_command = null;
         this.pref_alert_ip_change = null;
@@ -328,6 +325,12 @@ ARPSentinelApplet.prototype = {
             Settings.BindingDirection.IN,
             Constants.PREF_MAX_DEVICES,
             "pref_max_devices",
+            emptyCallback);
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            Constants.PREF_MAX_ITEMS_IN_LIST,
+            "pref_max_items_in_list",
             emptyCallback);
 
         this.settings.bindProperty(
@@ -432,6 +435,11 @@ ARPSentinelApplet.prototype = {
         this.set_applet_tooltip(this.macs.length + ' unique devices seen so far');
     },
 
+    _clear_list: function(){
+        this.menu.removeAll();
+        this._add_sticky_menus();
+    },
+
     set_icon: function(_icon){
         this.set_applet_icon_name( _icon );
     },
@@ -478,8 +486,7 @@ ARPSentinelApplet.prototype = {
 
         let itClear = new PopupMenu.PopupIconMenuItem("Clear alerts list", 'edit-clear-all', St.IconType.SYMBOLIC);
         itClear.connect('activate', Lang.bind(this, function(_item, event) {
-            this.menu.removeAll();
-            this._add_sticky_menus();
+            this._clear_list();
         }));
         this.menu.addMenuItem(itClear, 3);
 
@@ -754,6 +761,9 @@ ARPSentinelApplet.prototype = {
      * Adds a new device to the list
      */
     add_device: function(dev){
+        if (this.pref_max_items_in_list !== 0 && this.menu._getMenuItems().length > this.pref_max_items_in_list){
+            this._clear_list();
+        }
         if (this.macs.length > 0 && (this.macs.length+1) > this.pref_max_devices){
             this.show_notification('WARNING! Too many devices detected on the LAN',
                 'Max devices configured: ' + this.pref_max_devices
