@@ -128,7 +128,10 @@ const ArpSentinelService = new Lang.Class({
                     arpSentinel.add_device(data);
                 }
                 pos = arpSentinel.get_alert_index(data);
-                this.setAlertText(data, pos);
+                if (pos === -1){
+                    this.setAlertText(data, pos);
+                }
+                data = undefined;
         }));
 
     },
