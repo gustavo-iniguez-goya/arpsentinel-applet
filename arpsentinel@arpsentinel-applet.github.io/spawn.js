@@ -38,5 +38,6 @@ SpawnReader.prototype.read = function (stream, func) {
             func(out);
             this.read(source, func);
         }
+        stream.close(null);
     }));
 };
