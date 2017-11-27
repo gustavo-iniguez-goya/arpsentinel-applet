@@ -17,23 +17,23 @@ SpawnReader.prototype.spawn = function (path, command, flags, func) {
     [res, pid, stdin, stdout, stderr] = GLib.spawn_async_with_pipes(
         path, command, null, flags, null);
 
-    global.log('Spawn.spawn()');
+//    global.log('Spawn.spawn()');
     stream = new Gio.DataInputStream({ base_stream : new Gio.UnixInputStream({ fd : stdout }) });
-    global.log('Spawn.spawn() dataInputStream');
+//    global.log('Spawn.spawn() dataInputStream');
 
     this.read(stream, func);
 };
 
 SpawnReader.prototype.read = function (stream, func) {
-    global.log('Spawn.read()');
+//    global.log('Spawn.read()');
 
     stream.read_line_async(GLib.PRIORITY_LOW, null, Lang.bind (this, function (source, res) {
-    global.log('Spawn.read_line_async()');
+//    global.log('Spawn.read_line_async()');
 
         let out, length;
 
         [out, length] = source.read_line_finish(res);
-        global.log('Spawn.read() length: ' + length);
+//        global.log('Spawn.read() length: ' + length);
         if (out !== null) {
             func(out);
             this.read(source, func);
