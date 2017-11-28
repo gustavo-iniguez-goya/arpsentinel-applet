@@ -252,7 +252,6 @@ ARPSentinelApplet.prototype = {
     _init: function(metadata, orientation, panel_height, instance_id) {
         Applet.TextIconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
 
-        this.trusted_macs = [];
         // there're 2 types of list:
         // - macs: unique devices seen on the lan
         // - alerts: list of alerts received (dup alerts are ignored, see below)
@@ -276,6 +275,9 @@ ARPSentinelApplet.prototype = {
         this.pref_https_interval = 10;
         this.pref_https_domains = null;
         this._https_interval_timeout_id = null;
+        this.pref_whitelisted_devices = Actions.macs_in_whitelist;
+        this.settings.setValue(Constants.PREF_WHITELISTED_DEVS, this.pref_whitelisted_devices);
+        this.pref_alert_whitelisted = false;
         // TODO: reset macs/alerts on net wakeup
         // this.pref_reset_on_wakeup = true;
         // TODO: allow to only display certain alerts
@@ -302,7 +304,6 @@ ARPSentinelApplet.prototype = {
         //this.menu.addActor(this.vscroll);
 
         this._add_sticky_menus();
-        this._load_trusted_devices();
     
         this.ARPSentinelService = new ArpSentinelService();
 
@@ -310,12 +311,6 @@ ARPSentinelApplet.prototype = {
         this._notif_src = new Tray.Source("banner");
         Main.messageTray.add(this._notif_src);
 
-    },
-
-    _load_trusted_devices: function(){
-        let [result, fcontent, etag] = Gio.file_new_for_path(Constants.MACLIST_TRUSTED).load_contents(null); 
-        this.trusted_macs = fcontent.toString().split('\n');
-        GLib.free(fcontent);
     },
 
     _bind_settings: function(){
@@ -403,6 +398,23 @@ ARPSentinelApplet.prototype = {
             "pref_alert_mac_bl",
             emptyCallback);
 
+        this.settings.bindProperty(
+            Settings.BindingDirection.BIDIRECTIONAL,
+            Constants.PREF_ALERT_WHITELISTED,
+            "pref_alert_whitelisted",
+            Lang.bind(this, function(state){
+                this.pref_alert_whitelisted = state;
+            }));
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            Constants.PREF_WHITELISTED_DEVS,
+            "pref_whitelisted_devices",
+            Lang.bind(this, function(_text){
+                    global.log('YEAH: ' + _text);
+                this.pref_whitelisted_devices = _text;
+                Actions.save_whitelist(_text);
+            }));
     },
 
     show_notification: function(title, body, iname, urgency){
@@ -764,7 +776,7 @@ ARPSentinelApplet.prototype = {
         if (this.pref_max_items_in_list !== 0 && this.menu._getMenuItems().length > this.pref_max_items_in_list){
             this._clear_list();
         }
-        if (this.macs.length > 0 && (this.macs.length+1) > this.pref_max_devices){
+        if (this.pref_max_devices > 0 && this.macs.length > 0 && (this.macs.length+1) > this.pref_max_devices){
             this.show_notification('WARNING! Too many devices detected on the LAN',
                 'Max devices configured: ' + this.pref_max_devices
                 + '\nDevice detected:'
@@ -775,6 +787,20 @@ ARPSentinelApplet.prototype = {
                 + '\n\nLaunch wireshark and see what\'s going on.', 'dialog-warning',
                 Tray.Urgency.CRITICAL);
         }
+        if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== ''){
+            let trusted_dev = Actions.is_whitelisted(dev);
+            if (trusted_dev !== false){
+        // TODO: move out to a function
+                this.show_notification('WARNING! One of your trusted device changed',
+                    "\nSaved IP-MAC:\n  " + trusted_dev
+                    + "\nDetected change:"
+                    + "\n\n  MAC: " + dev.mac
+                    + "\n  IP: " + dev.ip
+                    + "\n\nReview it, check your ARP cache, do an arping, etc.",
+                    'dialog-warning',
+                    Tray.Urgency.CRITICAL);
+            }
+        }
         this.macs.push(dev);
         this.update_devices_list();
     },
@@ -783,7 +809,6 @@ ARPSentinelApplet.prototype = {
         //global.log('ARP Sentinel applet destroyed');
         this.pref_check_https = false;
         this.macs = [];
-        this.macs_trusted = [];
         this.ARPSentinelService.destroy();
         this.ARPSentinelService = null;
         arpSentinel = null;

@@ -67,6 +67,22 @@
         "tooltip" : ""
     },
 
+    "whitelisted_devices" : {
+        "type": "textview",
+        "editable": "true",
+        "cursor-visible": "true",
+        "description": "List of trusted devices (Example: DE:AD:BE:EF:FF:FF 192.168.1.1 wlp3s0)",
+        "default": "",
+        "tooltip": ""
+    },
+
+    "alert_whitelisted" : {
+        "type" : "checkbox",
+        "description" : "Alert me if the tuple ip-mac of these trusted devices do not match",
+        "default" : true,
+        "value": true
+    },
+
     "head_alerts": {
         "type": "header",
         "description": "Choose what alerts to display"

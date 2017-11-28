@@ -38,6 +38,8 @@ const PREF_HTTPS_DOMAINS    = 'https_domains';
 const PREF_BLOCK_COMMAND    = 'block_command';
 const PREF_ALERT_IP_CHANGE  = 'alert_ip_change';
 const PREF_ALERT_MAC_NOT_WL = 'alert_mac_not_wl';
+const PREF_ALERT_WHITELISTED = 'alert_whitelisted';
+const PREF_WHITELISTED_DEVS = 'whitelisted_devices';
 const PREF_ALERT_MAC_BL     = 'alert_mac_bl';
 const PREF_ALERT_MAC_NEW    = 'alert_mac_new';
 const PREF_ALERT_UNAUTH_ARP = 'alert_unauth_arp';
@@ -51,7 +53,6 @@ const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
 const ARPSENTINEL_HOME = AppletDir + '/data';
 const MACLIST_BL = GLib.get_home_dir() + '/.' + AppletName +'/maclist.deny';
 const MACLIST_WL = GLib.get_home_dir() + '/.'+ AppletName + '/maclist.allow';
-const MACLIST_TRUSTED = ARPSENTINEL_HOME + '/maclist.trusted';
 
 const ALERT_IP_CHANGE =     '0';
 // XXX: action -> add to whitelist
