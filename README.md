@@ -30,6 +30,7 @@ cinnamon applet for monitor events on the LAN
 ![Alert details](https://raw.githubusercontent.com/gustavo-iniguez-goya/arpsentinel-applet/master/screenshots/screenshot2.png)
 ![Alert details](https://raw.githubusercontent.com/gustavo-iniguez-goya/arpsentinel-applet/master/screenshots/screenshot3.png)
 ![Alert details](https://raw.githubusercontent.com/gustavo-iniguez-goya/arpsentinel-applet/master/screenshots/screenshot4.png)
+![Alert details](https://raw.githubusercontent.com/gustavo-iniguez-goya/arpsentinel-applet/master/screenshots/screenshot5.png)
 
 ----
 
