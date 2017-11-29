@@ -411,7 +411,6 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_WHITELISTED_DEVS,
             "pref_whitelisted_devices",
             Lang.bind(this, function(_text){
-                    global.log('YEAH: ' + _text);
                 this.pref_whitelisted_devices = _text;
                 Actions.save_whitelist(_text);
             }));
@@ -642,7 +641,6 @@ ARPSentinelApplet.prototype = {
         //global.log('check_https_integrity()');
         if (this.pref_check_https === true){
             let checker = new Spawn.SpawnReader();
-            let fb_fingerprint = 'SHA1 Fingerprint=93:6F:91:2B:AF:AD:21:6F:A5:15:25:6E:57:2C:DC:35:A1:45:1A:A5';
             let ds = this.pref_https_domains.split('\n');
             for (i=0, len=ds.length; i < len; i++){
                 if (this.pref_check_https === false){
@@ -655,7 +653,7 @@ ARPSentinelApplet.prototype = {
                 checker.spawn('./', openssl_cmd, GLib.SpawnFlags.SEARCH_PATH, (line) => {
                     // XXX: == is typed intentionally
                     if (line == d[1]){
-                        //global.log('HTTP OK');
+                        //global.log('HTTP OK: ' + d[1]);
                     }
                     else{
                         //global.log('HTTP K.O.');
@@ -673,11 +671,40 @@ ARPSentinelApplet.prototype = {
                 });
             }
 
+            let arp_cmd = [ AppletDir + '/bin/monitor_arp.sh' ];
+            checker.spawn('./', arp_cmd, GLib.SpawnFlags.SEARCH_PATH, (line) => {
+                let arp_entry = line.toString().split(' ');
+                this._check_trusted_devices(
+                    {mac: arp_entry[0], ip: arp_entry[1]},
+                    'Your ARP cache table is poisoned:');
+            });
+
             return true;
         }
         else{
             //global.log('check_https_integrity() false, stopping');
             return false;
+        }
+    },
+
+    /**
+     * display an alert, if one of the defined trusted device tuple
+     * has changed.
+     *
+     */
+    _check_trusted_devices: function(dev, title){
+        if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== ''){
+            let trusted_dev = Actions.is_whitelisted(dev);
+            if (trusted_dev !== false){
+                this.show_notification('WARNING! ' + title,
+                    "Saved IP-MAC:\n  " + trusted_dev
+                    + "\n\nDetected change:"
+                    + "\n  MAC: " + dev.mac
+                    + "\n  IP: " + dev.ip
+                    + "\n\nReview it, check your ARP cache, do an arping, etc.",
+                    'dialog-warning',
+                    Tray.Urgency.CRITICAL);
+            }
         }
     },
 
@@ -789,20 +816,7 @@ ARPSentinelApplet.prototype = {
                 + '\n\nLaunch wireshark and see what\'s going on.', 'dialog-warning',
                 Tray.Urgency.CRITICAL);
         }
-        if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== ''){
-            let trusted_dev = Actions.is_whitelisted(dev);
-            if (trusted_dev !== false){
-        // TODO: move out to a function
-                this.show_notification('WARNING! One of your trusted device changed',
-                    "\nSaved IP-MAC:\n  " + trusted_dev
-                    + "\nDetected change:"
-                    + "\n\n  MAC: " + dev.mac
-                    + "\n  IP: " + dev.ip
-                    + "\n\nReview it, check your ARP cache, do an arping, etc.",
-                    'dialog-warning',
-                    Tray.Urgency.CRITICAL);
-            }
-        }
+        this._check_trusted_devices(dev, 'One of your trusted devices has changed:');
         this.macs.push(dev);
         this.update_devices_list();
     },

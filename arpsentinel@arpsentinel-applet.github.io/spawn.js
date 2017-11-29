@@ -33,11 +33,13 @@ SpawnReader.prototype.read = function (stream, func) {
         let out, length;
 
         [out, length] = source.read_line_finish(res);
-//        global.log('Spawn.read() length: ' + length);
+        //global.log('Spawn.read() ret: ' + out);
         if (out !== null) {
             func(out);
             this.read(source, func);
         }
-        stream.close(null);
+        else{
+            stream.close(null);
+        }
     }));
 };
