@@ -266,12 +266,12 @@ ARPSentinelApplet.prototype = {
         this.settings = new Settings.AppletSettings(this, metadata.uuid, instance_id);
         this.pref_max_devices = null;
         this.pref_max_items_in_list = 20;
-        this.pref_hardening_mode = null;
+        this.pref_hardening_mode = true;
         this.pref_block_command = null;
         this.pref_alert_ip_change = null;
         this.pref_alert_mac_not_wl = null;
         this.pref_alert_mac_bl = null;
-        this.pref_check_https = null;
+        this.pref_check_https = false;
         this.pref_https_interval = 10;
         this.pref_https_domains = null;
         this._https_interval_timeout_id = null;
@@ -478,12 +478,14 @@ ARPSentinelApplet.prototype = {
                 _item.setIconName('changes-allow');
             }
         }));
+        this.menuHttps.setToggleState(this.pref_check_https);
         this.menu.addMenuItem(this.menuHttps, 0);
 
         let itPrefs = new PopupMenu.PopupSwitchMenuItem("Auto blacklist non whitelisted MACs", true);
         itPrefs.connect('toggled', Lang.bind(this, function(_item, state) {
             this.pref_hardening_mode = state;
         }));
+        itPrefs.setToggleState(this.pref_hardening_mode);
         this.menu.addMenuItem(itPrefs, 1);
 
         let itReset = new PopupMenu.PopupIconMenuItem("Reset", 'view-refresh', St.IconType.SYMBOLIC);
