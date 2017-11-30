@@ -5,14 +5,11 @@
 # 
 [ ! -f /proc/net/arp ] && exit
 
-while read line
+while read IP _ _ MAC _ DEV
 do
-    IP=`echo $line|cut -d " " -f 1`
-    MAC=`echo $line|cut -d " " -f 4`
-
     if [ "$IP" != "IP" ]
     then
-        echo "$MAC $IP"
+        echo "$MAC $IP $DEV"
     else
         continue
     fi
