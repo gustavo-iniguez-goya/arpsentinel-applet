@@ -1,13 +1,13 @@
 # arpsentinel-applet
-cinnamon applet for monitor events on the LAN
+cinnamon applet for monitor events on the LAN, using arpalert.
 
 #### WIP
 
 * gnome-shell code not added to the repo yet, and it lacks some features.
-* The MITM feature is just a PoC, experimental. The SSL certs of those domains tend to change a lot, so it would be better to check a domain which doesn't change. Or a service like https://checkmyhttps.net/
+* The MITM feature is just a PoC, experimental. A service like https://checkmyhttps.net/ would be more suitable.
 
 ## Installation
-- `apt-get install arpalert`
+- `apt-get install arpalert` || `dnf install arpalert` || `yum install arpalert`
 - `git clone ...`
 - `cd arpsentinel-applet`
 - `cp -a arpsentinel@arpsentinel-applet.github.io/ ~/.local/share/cinnamon/applets/`
@@ -36,8 +36,10 @@ cinnamon applet for monitor events on the LAN
 ----
 
 ## TODOs / Ideas
-* Allow to filter devices list by ip/mac/vendor.
+* Allow to filter/search devices list by ip/mac/vendor.
 * Make the devices list scrollable.
+* Allow to scan a device.
+* Manually/Periodically scan the network.
 * Script to block malicious devices (manually and based on certain events).
 * Translations.
 
