@@ -122,23 +122,23 @@ const ArpSentinelService = new Lang.Class({
                         type: alert_type, 
                         vendor: mac_vendor
                     };
-                    var pos = -1;
-                pos = arpSentinel.get_device_index(data);
-                if (pos === -1){
+                var pos_dev = -1;
+                var pos_alert = -1;
+                pos_dev = arpSentinel.get_device_index(data);
+                if (pos_dev === -1){
                     arpSentinel.add_device(data);
                 }
-                pos = arpSentinel.get_alert_index(data);
-                if (pos === -1){
-                    this.setAlertText(data, pos);
+                pos_alert = arpSentinel.get_alert_index(data);
+                if (pos_alert === -1){
+                    this.buildAlert(data, pos_alert, pos_dev);
                 }
                 data = undefined;
         }));
 
     },
 
-    setAlertText: function(data, pos) {
+    buildAlert: function(data, pos, pos_dev) {
         var _icon = 'security-low';
-        //global.log('YYY alert index: ' + pos);
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -157,6 +157,10 @@ const ArpSentinelService = new Lang.Class({
         switch(data.type){
             case Constants.ALERT_IP_CHANGE:
                 alert_text = 'IP Change';
+                if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
+                    alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    arpSentinel.macs[pos_dev] = data;
+                }
                 break;
             case Constants.ALERT_MAC_NOT_WL:
                 alert_text = 'Unknown';
@@ -188,10 +192,10 @@ const ArpSentinelService = new Lang.Class({
                 break;
             case Constants.ALERT_MAC_CHANGE:
                 alert_text = 'MAC change';
-                if (pos > -1 && data.mac !== arpSentinel.alerts[pos].mac){
-                    alert_text = 'MAC CHANGE (previous: ' + arpSentinel.alerts[pos].mac + ')';
+                var pdev = arpSentinel.check_ip_conflict(data.mac);
+                if (pdev !== -1){
+                    alert_text = 'MAC CHANGE (previous: ' + pdev.mac + ')';
                 }
-                // XXX: get previous MAC
                 // XXX: remove mac from the list
                 break;
             case Constants.ALERT_MAC_EXPIRED:
@@ -201,16 +205,10 @@ const ArpSentinelService = new Lang.Class({
             default:
                 alert_text = 'Unknown event';
         }
-        // IP DUPLICATED
-        if (pos > -1 && arpSentinel.alerts[pos].mac !== data.mac && 
-            arpSentinel.alerts[pos].ip === data.ip){
-            alert_text = 'IP DUPLICATED (' + data.ip + '/' + arpSentinel.alerts[pos].mac + ')';
+        var dupe = arpSentinel.check_ip_conflict(data);
+        if (dupe !== -1){
+            alert_text = 'IP CONFLICT (' + dupe.ip + '/' + dupe.mac + ')';
             data.type = Constants.ALERT_IP_DUPLICATED;
-        }
-        // Sometimes we receive several ALERT_MAC_NOT_WL, but with different IPs
-        else if (pos > -1 && data.ip !== arpSentinel.alerts[pos].ip){
-            alert_text = 'IP CHANGE (previous: ' + arpSentinel.alerts[pos].ip + ')';
-            data.type = Constants.ALERT_IP_CHANGE;
         }
         arpSentinel.add_alert(alert_text + ': ' + data.mac, data, _icon );
     },
@@ -574,9 +572,15 @@ ARPSentinelApplet.prototype = {
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_IP_DUPLICATED){
-            this.show_notification('WARNING! IP duplicated',
+            this.show_notification('WARNING! ' + _text,
                 'Details:\n\n' + alert_details, _icon,
-                Tray.Urgency.NORMAL);
+                Tray.Urgency.CRITICAL);
+            Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
+        }
+        else if (this.current_alert_level === Constants.ALERT_MAC_CHANGE){
+            this.show_notification('WARNING! ' + _text,
+                'Details:\n\n' + alert_details, _icon,
+                Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
 
@@ -709,7 +713,26 @@ ARPSentinelApplet.prototype = {
     },
 
     /**
+     * Check if we've seen 2 devices with the same IP.
+     */
+    check_ip_conflict: function(dev){
+        if (this.macs.length < 2){
+            return -1;
+        }
+        for (var i = this.macs.length-1; i > -1; i--){
+            if (this.macs[i].ip === dev.ip && this.macs[i].mac !== dev.mac){
+                return this.macs[i];
+            }
+        }
+
+        return -1;
+    },
+
+    /**
      * get device index in the list
+     *
+     * Without fingerprinting a device, is impossible to be sure if a device is
+     * unique or not. It may have changed the MAC, etc.
      *
      */
     get_device_index: function(data){
@@ -717,7 +740,6 @@ ARPSentinelApplet.prototype = {
         for (var i = 0; i < this.macs.length; i++){
             // ignore duplicated alerts
             if (this.macs[i].mac === data.mac){
-                this.macs[i] = data;
                 return i;
                 break;
             }
