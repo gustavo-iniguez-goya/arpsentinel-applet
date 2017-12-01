@@ -74,3 +74,7 @@ const ALERT_IP_DUPLICATED =   '100';
 
 const ALERT_STATUS_NORMAL = '0';
 
+const ICON_DIALOG_WARNING = 'dialog-warning';
+const ICON_SECURITY_LOW = 'security-low';
+const ICON_SECURITY_MEDIUM = 'security-medium';
+const ICON_SECURITY_HIGH = 'security-high';

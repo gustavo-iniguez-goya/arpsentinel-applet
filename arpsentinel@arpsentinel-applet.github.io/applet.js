@@ -138,20 +138,20 @@ const ArpSentinelService = new Lang.Class({
     },
 
     buildAlert: function(data, pos, pos_dev) {
-        var _icon = 'security-low';
+        var _icon = Constants.ICON_SECURITY_LOW;
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
                 data.type == Constants.ALERT_MAC_BL || 
                 data.type == Constants.ALERT_TOO_MUCH_ARP){
-            _icon = 'security-high';
+            _icon = Constants.ICON_SECURITY_HIGH;
         }
         else if (data.type == Constants.ALERT_UNAUTH_ARP || 
             data.type == Constants.ALERT_MAC_NOT_WL){
-            _icon = 'security-medium';
+            _icon = Constants.ICON_SECURITY_MEDIUM;
         }
         else{
-            _icon = 'security-low';
+            _icon = Constants.ICON_SECURITY_LOW;
         }
 
         switch(data.type){
@@ -430,7 +430,7 @@ ARPSentinelApplet.prototype = {
 
     on_applet_clicked: function(event) {
         this.menu.toggle();
-        this.set_applet_icon_name( 'security-low' );
+        this.set_applet_icon_name( Constants.ICON_SECURITY_LOW );
         this.update_devices_list();
         this.current_alert_level = '-1';
     },
@@ -661,13 +661,13 @@ ARPSentinelApplet.prototype = {
                     }
                     else{
                         //global.log('HTTP K.O.');
-                        this.set_icon('dialog-warning');
+                        this.set_icon(Constants.ICON_DIALOG_WARNING);
                         // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
                         this.show_notification('WARNING!',
                             '<b>Your communications might be being intercepted</b>\n\n'
                             + d[0] + ' fingerprint obtained:\n ' + line
                             + '\n' + d[0] + ' fingerprint saved:\n ' + d[1]
-                            + '\n\nCheck it out, and reenable the check again.', 'dialog-warning',
+                            + '\n\nCheck it out, and reenable the check again.', Constants.ICON_DIALOG_WARNING,
                             Tray.Urgency.CRITICAL);
                         Mainloop.timeout_add(600, Lang.bind(this, this._blink_alert), 1);
                         this.pref_check_https = false;
@@ -706,7 +706,7 @@ ARPSentinelApplet.prototype = {
                     + "\n  MAC: " + dev.mac
                     + "\n  IP: " + dev.ip
                     + "\n\nReview it, check your ARP cache, do an arping, etc.",
-                    'dialog-warning',
+                    Constants.ICON_DIALOG_WARNING,
                     Tray.Urgency.CRITICAL);
             }
         }
@@ -835,7 +835,7 @@ ARPSentinelApplet.prototype = {
                 + '\n\tIP: ' + dev.ip
                 + '\n\tDEVICE: ' + dev.device
                 + '\n\tVENDOR: ' + dev.vendor
-                + '\n\nLaunch wireshark and see what\'s going on.', 'dialog-warning',
+                + '\n\nLaunch wireshark and see what\'s going on.', Constants.ICON_DIALOG_WARNING,
                 Tray.Urgency.CRITICAL);
         }
         this._check_trusted_devices(dev, 'One of your trusted devices has changed:');
