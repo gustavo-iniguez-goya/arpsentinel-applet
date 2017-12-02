@@ -536,7 +536,7 @@ ARPSentinelApplet.prototype = {
             let itemNotWL = new PopupMenu.PopupMenuItem( "  Add to whitelist >" );
             itemNotWL['arpsentinel'] = data;
             itemNotWL.connect('activate', Lang.bind(this, function(_item, ev){
-                Actions.add_whitelist_mac(_item.arpsentinel, true);
+                this.pref_whitelisted_devices = Actions.add_whitelist_mac(_item.arpsentinel, true);
                 itemNotWL.destroy();
             }));
             item.menu.addMenuItem(itemNotWL);

@@ -100,7 +100,8 @@ function add_whitelist_mac(data, force){
         remove_mac_from_file(data.mac, Constants.MACLIST_BL);
     }
 
-    macs_in_whitelist = data.mac + " " + data.ip + " " + data.device + " \n";
+    macs_in_whitelist = macs_in_whitelist + data.mac + " " + data.ip + " " + data.device + " \n";
+    return macs_in_whitelist;
 }
 
 function add_blacklist_mac(data, force){
