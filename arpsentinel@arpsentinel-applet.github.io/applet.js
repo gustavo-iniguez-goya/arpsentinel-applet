@@ -128,16 +128,28 @@ const ArpSentinelService = new Lang.Class({
                 if (pos_dev === -1){
                     arpSentinel.add_device(data);
                 }
+                var dupe_dev = arpSentinel.check_ip_conflict(data);
+                if (dupe_dev !== -1){
+                    data.type = Constants.ALERT_IP_DUPLICATED;
+                }
                 pos_alert = arpSentinel.get_alert_index(data);
                 if (pos_alert === -1){
-                    this.buildAlert(data, pos_alert, pos_dev);
+                    this.buildAlert(data, pos_alert, pos_dev, dupe_dev);
                 }
                 data = undefined;
         }));
 
     },
 
-    buildAlert: function(data, pos, pos_dev) {
+    /**
+     * Adds a new entry to the list of alerts.
+     *
+     * @param {string} data - new device data
+     * @param {string} pos - alert index
+     * @param {string} pos_dev - device index
+     * @param {string} pos_dupe - position of the the duplicated IP
+     */
+    buildAlert: function(data, pos, pos_dev, dupe_dev) {
         var _icon = Constants.ICON_SECURITY_LOW;
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
@@ -157,6 +169,7 @@ const ArpSentinelService = new Lang.Class({
         switch(data.type){
             case Constants.ALERT_IP_CHANGE:
                 alert_text = 'IP Change';
+                pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
                     alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
                     arpSentinel.macs[pos_dev] = data;
@@ -164,6 +177,12 @@ const ArpSentinelService = new Lang.Class({
                 break;
             case Constants.ALERT_MAC_NOT_WL:
                 alert_text = 'Unknown';
+                pos_dev = arpSentinel.get_device_by_mac(data.mac);
+                if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
+                    alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    data.type = Constants.ALERT_IP_CHANGE;
+                    arpSentinel.macs[pos_dev] = data;
+                }
                 //add_blacklist_mac( data );
                 break;
             case Constants.ALERT_MAC_BL:
@@ -191,10 +210,16 @@ const ArpSentinelService = new Lang.Class({
                 Actions.add_blacklist_mac( data, false );
                 break;
             case Constants.ALERT_MAC_CHANGE:
+                // XXX: mm, I think that arpalert sometimes detects IP CHANGEs as MAC CHANGEs
                 alert_text = 'MAC change';
-                var pdev = arpSentinel.check_ip_conflict(data.mac);
-                if (pdev !== -1){
-                    alert_text = 'MAC CHANGE (previous: ' + pdev.mac + ')';
+                pos_dev = arpSentinel.get_device_by_mac(data.mac);
+                if (pos_dev > -1 && arpSentinel.macs[pos_dev].mac !== data.mac){
+                    alert_text = 'MAC CHANGE (previous: ' + arpSentinel.macs[pos_dev].mac + ')';
+                }
+                else if (pos_dev > -1 && arpSentinel.macs[pos_dev].mac === data.mac &&
+                    arpSentinel.macs[pos_dev].ip !== data.ip){
+                    alert_text = 'MAC/IP CHANGE (previous: ' + arpSentinel.macs[pos_dev].ip + ')';
+                    data.type = Constants.ALERT_IP_CHANGE;
                 }
                 // XXX: remove mac from the list
                 break;
@@ -202,13 +227,12 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'MAC expired';
                 arpSentinel.remove_device_by_mac(data.mac);
                 break;
+            case Constants.ALERT_IP_DUPLICATED:
+                alert_text = 'IP CONFLICT (' + dupe_dev.ip + '/' + dupe_dev.mac + ')';
+                data.type = Constants.ALERT_IP_DUPLICATED;
+                break;
             default:
                 alert_text = 'Unknown event';
-        }
-        var dupe = arpSentinel.check_ip_conflict(data);
-        if (dupe !== -1){
-            alert_text = 'IP CONFLICT (' + dupe.ip + '/' + dupe.mac + ')';
-            data.type = Constants.ALERT_IP_DUPLICATED;
         }
         arpSentinel.add_alert(alert_text + ': ' + data.mac, data, _icon );
     },
@@ -572,14 +596,16 @@ ARPSentinelApplet.prototype = {
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_IP_DUPLICATED){
-            this.show_notification('WARNING! ' + _text,
-                'Details:\n\n' + alert_details, _icon,
+            this.show_notification('WARNING! ',
+                '<b>' + _text + '</b>'
+                + '\n\nDetails:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_MAC_CHANGE){
-            this.show_notification('WARNING! ' + _text,
-                'Details:\n\n' + alert_details, _icon,
+            this.show_notification('WARNING! ',
+                '<b>' + _text + '</b>'
+                + '\n\nDetails:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
@@ -716,7 +742,7 @@ ARPSentinelApplet.prototype = {
      * Check if we've seen 2 devices with the same IP.
      */
     check_ip_conflict: function(dev){
-        if (this.macs.length < 2){
+        if (this.macs.length < 2 || dev.ip === '0.0.0.0'){
             return -1;
         }
         for (var i = this.macs.length-1; i > -1; i--){
@@ -737,7 +763,7 @@ ARPSentinelApplet.prototype = {
      */
     get_device_index: function(data){
         // array.map() seems to not work
-        for (var i = 0; i < this.macs.length; i++){
+        for (var i = this.macs.length-1; i > -1; i--){
             // ignore duplicated alerts
             if (this.macs[i].mac === data.mac){
                 return i;
@@ -755,7 +781,7 @@ ARPSentinelApplet.prototype = {
      */
     get_alert_index: function(dev){
         // array.map() seems to not work
-        for (var i = 0; i < this.alerts.length; i++){
+        for (var i = this.alerts.length-1; i > -1; i--){
             // ignore duplicated alerts
             if (this.alerts[i].mac === dev.mac && 
                 this.alerts[i].ip === dev.ip && 
@@ -798,7 +824,7 @@ ARPSentinelApplet.prototype = {
      * get a device given its MAC
      */
     get_device_by_mac: function(mac){
-        for (var i = 0; i < this.macs.length; i++){
+        for (var i = this.macs.length-1; i > -1; i--){
             if (this.macs[i].mac === mac){
                 return i;
                 break;
