@@ -171,7 +171,12 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'IP Change';
                 pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
-                    alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0'){
+                        alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    }
+                    else if (arpSentinel.macs[pos_dev].ip === '0.0.0.0' && data.ip !== '0.0.0.0'){
+                        alert_text = "IP acquired";
+                    }
                     arpSentinel.macs[pos_dev] = data;
                 }
                 break;
@@ -179,9 +184,17 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'Unknown';
                 pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
-                    alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0'){
+                        alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+                    }
+                    else if (arpSentinel.macs[pos_dev].ip === '0.0.0.0' && data.ip !== '0.0.0.0'){
+                        alert_text = "IP acquired";
+                    }
                     data.type = Constants.ALERT_IP_CHANGE;
                     arpSentinel.macs[pos_dev] = data;
+                }
+                else if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip === data.ip){
+                    return;
                 }
                 //add_blacklist_mac( data );
                 break;
