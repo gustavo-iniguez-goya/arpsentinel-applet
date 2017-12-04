@@ -763,7 +763,7 @@ ARPSentinelApplet.prototype = {
      */
     get_device_index: function(data){
         // array.map() seems to not work
-        for (var i = this.macs.length-1; i > -1; i--){
+        for (var i = 0, len=this.macs.length; i < len; i++){
             // ignore duplicated alerts
             if (this.macs[i].mac === data.mac){
                 return i;
@@ -781,7 +781,7 @@ ARPSentinelApplet.prototype = {
      */
     get_alert_index: function(dev){
         // array.map() seems to not work
-        for (var i = this.alerts.length-1; i > -1; i--){
+        for (var i = 0, len=this.alerts.length; i < len; i++){
             // ignore duplicated alerts
             if (this.alerts[i].mac === dev.mac && 
                 this.alerts[i].ip === dev.ip && 
@@ -791,30 +791,6 @@ ARPSentinelApplet.prototype = {
                 return i;
                 break;
             }
-            /*
-            // IP CHANGE
-            else if (this.macs[i].mac === dev.mac && 
-                this.macs[i].vendor === dev.vendor &&
-            // IP CHANGE
-            else if (this.macs[i].mac === dev.mac && 
-                this.macs[i].vendor === dev.vendor &&
-                this.macs[i].ip !== dev.ip){
-                return i;
-                break;
-            }
-            // IP DUPLICATED
-            else if (this.macs[i].mac !== dev.mac && 
-                this.macs[i].ip === dev.ip){
-                return i;
-                break;
-            }
-            // MAC DUPlICATED
-            else if (this.macs[i].mac === dev.mac && 
-                this.macs[i].vendor !== dev.vendor){
-                return i;
-                break;
-            }
-            */
         }
 
         return -1;
