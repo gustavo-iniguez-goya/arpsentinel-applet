@@ -126,7 +126,9 @@ const ArpSentinelService = new Lang.Class({
                 var pos_alert = -1;
                 pos_dev = arpSentinel.get_device_index(data);
                 if (pos_dev === -1){
+                    this.buildAlert(data, pos_alert, pos_dev, dupe_dev);
                     arpSentinel.add_device(data);
+                    return;
                 }
                 var dupe_dev = arpSentinel.check_ip_conflict(data);
                 if (dupe_dev !== -1){
@@ -134,6 +136,7 @@ const ArpSentinelService = new Lang.Class({
                 }
                 pos_alert = arpSentinel.get_alert_index(data);
                 if (pos_alert === -1){
+                    // XXX: by the first time we build an alert, the device already exist in the list, because we have added it above
                     this.buildAlert(data, pos_alert, pos_dev, dupe_dev);
                 }
                 data = undefined;
@@ -171,11 +174,9 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'IP Change';
                 pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
-                    if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0'){
-                        alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
-                    }
-                    else if (arpSentinel.macs[pos_dev].ip === '0.0.0.0' && data.ip !== '0.0.0.0'){
-                        alert_text = "IP acquired";
+                    _alert_text = this.track_ip_changes(pos_dev, data);
+                    if (_alert_text !== null){
+                        alert_text = _alert_text;
                     }
                     arpSentinel.macs[pos_dev] = data;
                 }
@@ -184,11 +185,9 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'Unknown';
                 pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip !== data.ip){
-                    if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0'){
-                        alert_text = "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
-                    }
-                    else if (arpSentinel.macs[pos_dev].ip === '0.0.0.0' && data.ip !== '0.0.0.0'){
-                        alert_text = "IP acquired";
+                    _alert_text = this.track_ip_changes(pos_dev, data);
+                    if (_alert_text !== null){
+                        alert_text = _alert_text;
                     }
                     data.type = Constants.ALERT_IP_CHANGE;
                     arpSentinel.macs[pos_dev] = data;
@@ -224,7 +223,8 @@ const ArpSentinelService = new Lang.Class({
                 Actions.add_blacklist_mac( data, false );
                 break;
             case Constants.ALERT_MAC_CHANGE:
-                // XXX: mm, I think that arpalert sometimes detects IP CHANGEs as MAC CHANGEs
+                // XXX: arpalert detects MAC CHANGEs, for example when it has saved a IP-MAC,
+                // and later the DHCP decides to give the same IP to another device.
                 alert_text = 'MAC change';
                 pos_dev = arpSentinel.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && arpSentinel.macs[pos_dev].mac !== data.mac){
@@ -249,6 +249,44 @@ const ArpSentinelService = new Lang.Class({
                 alert_text = 'Unknown event';
         }
         arpSentinel.add_alert(alert_text + ': ' + data.mac, data, _icon );
+    },
+
+
+    /**
+     * Track IP changes of the devices.
+     *
+     * @param {integer} pos_dev - index of the device in the local list
+     * @param {onject}  dev - New device seen in the net
+     * @return {string/null}
+     *
+     */
+    track_ip_changes: function(pos_dev, dev){
+        // real IP change
+        if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0' && arpSentinel.macs[pos_dev].ip.indexOf('169.254.') === -1 &&
+                dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
+            return "IP Change (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+        }
+        // real IP acquired
+        else if ((arpSentinel.macs[pos_dev].ip === '0.0.0.0' || arpSentinel.macs[pos_dev].ip.indexOf('169.254.') !== -1) &&
+                dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
+            return "IP acquired";
+        }
+        // start searching for an IP
+        else if (arpSentinel.macs[pos_dev].ip !== '0.0.0.0' &&
+                arpSentinel.macs[pos_dev].ip.indexOf('169.254.') === -1 && dev.ip === '0.0.0.0'){
+            return "IP lost (previous: " + arpSentinel.macs[pos_dev].ip + ')';
+        }
+        else if (dev.ip.indexOf('169.254.') !== -1 && arpSentinel.macs[pos_dev].ip === '0.0.0.0'){
+            return "Failed to get IP from DHCP (again)";
+        }
+        // rfc5735: Hosts obtain these addresses by auto-configuration, such as when a DHCP server cannot be found.
+        else if (dev.ip.indexOf('169.254.') !== -1){
+            return "Failed to get IP from DHCP";
+        }
+        else{
+        }
+
+        return null;
     },
 
     destroy: function(){
