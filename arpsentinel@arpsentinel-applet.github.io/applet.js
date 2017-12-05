@@ -193,7 +193,8 @@ const ArpSentinelService = new Lang.Class({
                     data.type = Constants.ALERT_IP_CHANGE;
                     arpSentinel.macs[pos_dev] = data;
                 }
-                else if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip === data.ip){
+                else if (pos_dev > -1 && arpSentinel.macs[pos_dev].ip === data.ip && 
+                         arpSentinel.macs[pos_dev].mac === data.mac){
                     return;
                 }
                 //add_blacklist_mac( data );
