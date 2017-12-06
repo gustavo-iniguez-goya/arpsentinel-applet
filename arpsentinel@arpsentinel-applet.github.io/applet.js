@@ -37,7 +37,6 @@ const Lang = imports.lang;
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
-const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
 const Signals = imports.signals;
@@ -54,6 +53,7 @@ const Constants = imports.constants;
 const Actions = AppletObj.actions;
 const Spawn = AppletObj.spawn;
 const ArpSentinelObj = AppletObj.arpsentinel;
+const NotificationsManager = AppletObj.notifications;
 
 /**
  * TODOS:
@@ -128,7 +128,6 @@ const ArpSentinelService = new Lang.Class({
                 var pos_alert = -1;
                 pos_dev = this.arpSentinel.get_device_index(data);
                 if (pos_dev === -1){
-                    global.log('XX');
                     this.arpSentinel.buildAlert(data, pos_alert, pos_dev, -1,
                         function (_text, data, _icon){
                             arpSentinelApplet.add_alert(_text, data, _icon);
@@ -243,8 +242,7 @@ ARPSentinelApplet.prototype = {
 
         this._add_sticky_menus();
     
-        this._notif_src = new Tray.Source("banner");
-        Main.messageTray.add(this._notif_src);
+        this.notifications = new NotificationsManager.Notifications();
 
     },
 
@@ -349,20 +347,6 @@ ARPSentinelApplet.prototype = {
                 this.pref_whitelisted_devices = _text;
                 Actions.save_whitelist(_text);
             }));
-    },
-
-    show_notification: function(title, body, iname, urgency){
-        let not = new Tray.Notification(this._notif_src, title, body, 
-            {
-                bodyMarkup: true,
-                bannerMarkup: true,
-                icon:  new St.Icon({ icon_name: iname,
-                             icon_type: St.IconType.SYMBOLIC,
-                             icon_size: 24 })
-            });
-        // make the notification not auto hide
-        not.setUrgency(urgency);
-        this._notif_src.notify(not);
     },
 
     on_applet_clicked: function(event) {
@@ -496,26 +480,26 @@ ARPSentinelApplet.prototype = {
                 '\n  VENDOR: \t' + data.vendor;
         // TODO: monitor current_alert_level, and make a callback
         if (this.current_alert_level === Constants.ALERT_ETHER_NOT_ARP){
-            this.show_notification('WARNING!! Possible ARP spoofing in course',
+            this.notifications.show('WARNING!! Possible ARP spoofing in course',
                 'There might be an ARP spoofing in course. Details:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(600, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_GLOBAL_FLOOD){
-            this.show_notification('WARNING! Global flood detected',
+            this.notifications.show('WARNING! Global flood detected',
                 'There might be an ARP scan in course, or something worst. Details:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_IP_DUPLICATED){
-            this.show_notification('WARNING! ',
+            this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_MAC_CHANGE){
-            this.show_notification('WARNING! ',
+            this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL);
@@ -601,7 +585,7 @@ ARPSentinelApplet.prototype = {
                         //global.log('HTTP K.O.');
                         this.set_icon(Constants.ICON_DIALOG_WARNING);
                         // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
-                        this.show_notification('WARNING!',
+                        this.notifications.show('WARNING!',
                             '<b>Your communications might be being intercepted</b>\n\n'
                             + d[0] + ' fingerprint obtained:\n ' + line
                             + '\n' + d[0] + ' fingerprint saved:\n ' + d[1]
@@ -638,7 +622,7 @@ ARPSentinelApplet.prototype = {
         if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== ''){
             let trusted_dev = Actions.is_whitelisted(dev);
             if (trusted_dev !== false){
-                this.show_notification('WARNING! ' + title,
+                this.notifications.show('WARNING! ' + title,
                     "Saved IP-MAC:\n  " + trusted_dev
                     + "\n\nDetected change:"
                     + "\n  MAC: " + dev.mac
@@ -659,7 +643,7 @@ ARPSentinelApplet.prototype = {
             this._clear_list();
         }
         if (this.pref_max_devices > 0 && this.arpSentinel.get_devices_num() > 0 && (this.arpSentinel.get_devices_num()+1) > this.pref_max_devices){
-            this.show_notification('WARNING! Too many devices detected on the LAN',
+            this.notifications.show('WARNING! Too many devices detected on the LAN',
                 'Max devices configured: ' + this.pref_max_devices
                 + '\nDevice detected:'
                 + '\n\tMAC: ' + dev.mac
