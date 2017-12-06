@@ -482,27 +482,35 @@ ARPSentinelApplet.prototype = {
         if (this.current_alert_level === Constants.ALERT_ETHER_NOT_ARP){
             this.notifications.show('WARNING!! Possible ARP spoofing in course',
                 'There might be an ARP spoofing in course. Details:\n\n' + alert_details, _icon,
-                Tray.Urgency.CRITICAL);
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_ARP_SPOOFING
+            );
             Mainloop.timeout_add(600, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_GLOBAL_FLOOD){
             this.notifications.show('WARNING! Global flood detected',
                 'There might be an ARP scan in course, or something worst. Details:\n\n' + alert_details, _icon,
-                Tray.Urgency.CRITICAL);
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_GLOBAL_FLOOD
+            );
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_IP_DUPLICATED){
             this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
-                Tray.Urgency.CRITICAL);
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_IP_DUPLICATED
+            );
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
         else if (this.current_alert_level === Constants.ALERT_MAC_CHANGE){
             this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
-                Tray.Urgency.CRITICAL);
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_MAC_CHANGE
+            );
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
 
@@ -590,7 +598,9 @@ ARPSentinelApplet.prototype = {
                             + d[0] + ' fingerprint obtained:\n ' + line
                             + '\n' + d[0] + ' fingerprint saved:\n ' + d[1]
                             + '\n\nCheck it out, and reenable the check again.', Constants.ICON_DIALOG_WARNING,
-                            Tray.Urgency.CRITICAL);
+                            Tray.Urgency.CRITICAL,
+                            this.notifications.TYPE_MITM
+                        );
                         Mainloop.timeout_add(600, Lang.bind(this, this._blink_alert), 1);
                         this.pref_check_https = false;
                     }
@@ -629,7 +639,9 @@ ARPSentinelApplet.prototype = {
                     + "\n  IP: " + dev.ip
                     + "\n\nReview it, check your ARP cache, do an arping, etc.",
                     Constants.ICON_DIALOG_WARNING,
-                    Tray.Urgency.CRITICAL);
+                    Tray.Urgency.CRITICAL,
+                    this.notifications.TYPE_TRUSTED_CHANGE
+                );
             }
         }
     },
@@ -651,7 +663,9 @@ ARPSentinelApplet.prototype = {
                 + '\n\tDEVICE: ' + dev.device
                 + '\n\tVENDOR: ' + dev.vendor
                 + '\n\nLaunch wireshark and see what\'s going on.', Constants.ICON_DIALOG_WARNING,
-                Tray.Urgency.CRITICAL);
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_MAX_DEVICES
+            );
         }
         this._check_trusted_devices(dev, 'One of your trusted devices has changed:');
         this.arpSentinel.add_device(dev);

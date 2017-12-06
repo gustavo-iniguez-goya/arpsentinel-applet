@@ -26,8 +26,20 @@ const Actions = AppletObj.actions;
 const Main = imports.ui.main;
 const Tray = imports.ui.messageTray;
 const St = imports.gi.St;
+const Lang = imports.lang;
 
 function Notifications(){
+    this.NONE                = -1;
+    this.TYPE_MAC_CHANGE     = 0;
+    this.TYPE_IP_DUPLICATED  = 1;
+    this.TYPE_MAX_DEVICES    = 2;
+    this.TYPE_TRUSTED_CHANGE = 3;
+    this.TYPE_ARP_SPOOFING   = 10;
+    this.TYPE_GLOBAL_FLOOD   = 10;
+    this.TYPE_MITM           = 10;
+
+    this.notif_active = this.NONE;
+
     this._notif_src = new Tray.Source("banner");
     Main.messageTray.add(this._notif_src);
 
@@ -38,8 +50,13 @@ function Notifications(){
      * @param {string} _body - Body of the notification
      * @param {string} _ic_name - Icon name
      * @param {string} _urgency - Notification urgency
+     * @param {number} _type - Notification type
      */
-    this.show = function(_title, _body, _ic_name, _urgency){
+    this.show = function(_title, _body, _ic_name, _urgency, _type){
+        if (this.notif_active === _type){
+            global.log('ACTIVE: ' + _type);
+            return;
+        }
         let not = new Tray.Notification(this._notif_src, _title, _body, 
             {
                 bodyMarkup: true,
@@ -50,7 +67,11 @@ function Notifications(){
             });
         // make the notification not auto hide
         not.setUrgency(_urgency);
+        not.connect('clicked', Lang.bind(this, function(){
+            this.notif_active = this.NONE;
+        }));
         this._notif_src.notify(not);
+        this.notif_active = _type;
     };
     
     this.show_warning = function(_title, _body, _ic_name){
