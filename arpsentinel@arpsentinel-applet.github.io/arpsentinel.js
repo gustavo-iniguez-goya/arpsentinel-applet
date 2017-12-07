@@ -158,7 +158,6 @@ function ArpSentinel(){
      *
      */
     this._track_ip_changes = function(pos_dev, dev){
-        //global.log('track_ip_changes()');
         // real IP change
         if (this.macs[pos_dev].ip !== '0.0.0.0' && this.macs[pos_dev].ip.indexOf('169.254.') === -1 &&
                 dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
