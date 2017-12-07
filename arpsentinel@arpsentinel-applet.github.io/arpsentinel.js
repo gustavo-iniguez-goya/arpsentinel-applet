@@ -37,7 +37,6 @@ function ArpSentinel(){
      */
     this.buildAlert = function(data, pos, pos_dev, dupe_dev, callback) {
         var _icon = Constants.ICON_SECURITY_LOW;
-        global.log('buildAlert, pos_dev: ' + pos_dev);
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -112,11 +111,11 @@ function ArpSentinel(){
                 alert_text = 'MAC change';
                 pos_dev = this.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && this.macs[pos_dev].mac !== data.mac){
-                    alert_text = 'MAC CHANGE (previous = ' + this.macs[pos_dev].mac + ')';
+                    alert_text = 'MAC CHANGE (previous: ' + this.macs[pos_dev].mac + ')';
                 }
                 else if (pos_dev > -1 && this.macs[pos_dev].mac === data.mac &&
                     this.macs[pos_dev].ip !== data.ip){
-                    alert_text = 'MAC/IP CHANGE (previous = ' + this.macs[pos_dev].ip + ')';
+                    alert_text = 'MAC/IP CHANGE (previous: ' + this.macs[pos_dev].ip + ')';
                     data.type = Constants.ALERT_IP_CHANGE;
                 }
                 // XXX = remove mac from the list
@@ -132,7 +131,7 @@ function ArpSentinel(){
             default:
                 alert_text = 'Unknown event';
         }
-        callback(alert_text + ' : ' + data.mac, data, _icon);
+        callback(alert_text + ': ' + data.mac, data, _icon);
     };
 
 
@@ -145,11 +144,10 @@ function ArpSentinel(){
      *
      */
     this._track_ip_changes = function(pos_dev, dev){
-        global.log('track_ip_changes()');
         // real IP change
         if (this.macs[pos_dev].ip !== '0.0.0.0' && this.macs[pos_dev].ip.indexOf('169.254.') === -1 &&
                 dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
-            return "IP Change (previous = " + this.macs[pos_dev].ip + ')';
+            return "IP Change (previous: " + this.macs[pos_dev].ip + ')';
         }
         // real IP acquired
         else if ((this.macs[pos_dev].ip === '0.0.0.0' || this.macs[pos_dev].ip.indexOf('169.254.') !== -1) &&
@@ -159,7 +157,7 @@ function ArpSentinel(){
         // start searching for an IP
         else if (this.macs[pos_dev].ip !== '0.0.0.0' &&
                 this.macs[pos_dev].ip.indexOf('169.254.') === -1 && dev.ip === '0.0.0.0'){
-            return "IP lost (previous = " + this.macs[pos_dev].ip + ')';
+            return "IP lost (previous: " + this.macs[pos_dev].ip + ')';
         }
         else if (dev.ip.indexOf('169.254.') !== -1 && this.macs[pos_dev].ip === '0.0.0.0'){
             return "Failed to get IP from DHCP (again)";
