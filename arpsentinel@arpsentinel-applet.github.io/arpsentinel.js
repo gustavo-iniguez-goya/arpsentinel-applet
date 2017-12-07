@@ -26,6 +26,20 @@ const Actions = AppletObj.actions;
 function ArpSentinel(){
     this.macs = [];
     this.alerts = [];
+    this.show_alerts = [];
+    this.show_alerts.push(Constants.ALERT_IP_CHANGE);
+    this.show_alerts.push(Constants.ALERT_UNAUTH_ARP);
+    this.show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
+    this.show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
+    this.show_alerts.push(Constants.ALERT_ETHER_NOT_ARP);
+    this.show_alerts.push(Constants.ALERT_MAC_BL);
+    this.show_alerts.push(Constants.ALERT_MAC_NOT_WL);
+    this.show_alerts.push(Constants.ALERT_MAC_NEW);
+    this.show_alerts.push(Constants.ALERT_MAC_CHANGE);
+    this.show_alerts.push(Constants.ALERT_MAC_EXPIRED);
+    this.show_alerts.push(Constants.ALERT_IP_DUPLICATED);
+        global.log('ALERTS: ' + this.show_alerts.length);
+    this.current_alert_level = Constants.ALERT_NONE;
     
     /**
      * Adds a new entry to the list of alerts.
@@ -37,7 +51,6 @@ function ArpSentinel(){
      */
     this.buildAlert = function(data, pos, pos_dev, dupe_dev, callback) {
         var _icon = Constants.ICON_SECURITY_LOW;
-        global.log('buildAlert, pos_dev: ' + pos_dev);
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -112,11 +125,11 @@ function ArpSentinel(){
                 alert_text = 'MAC change';
                 pos_dev = this.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && this.macs[pos_dev].mac !== data.mac){
-                    alert_text = 'MAC CHANGE (previous = ' + this.macs[pos_dev].mac + ')';
+                    alert_text = 'MAC CHANGE (previous: ' + this.macs[pos_dev].mac + ')';
                 }
                 else if (pos_dev > -1 && this.macs[pos_dev].mac === data.mac &&
                     this.macs[pos_dev].ip !== data.ip){
-                    alert_text = 'MAC/IP CHANGE (previous = ' + this.macs[pos_dev].ip + ')';
+                    alert_text = 'MAC/IP CHANGE (previous: ' + this.macs[pos_dev].ip + ')';
                     data.type = Constants.ALERT_IP_CHANGE;
                 }
                 // XXX = remove mac from the list
@@ -132,7 +145,7 @@ function ArpSentinel(){
             default:
                 alert_text = 'Unknown event';
         }
-        callback(alert_text + ' : ' + data.mac, data, _icon);
+        callback(alert_text + ': ' + data.mac, data, _icon);
     };
 
 
@@ -145,11 +158,11 @@ function ArpSentinel(){
      *
      */
     this._track_ip_changes = function(pos_dev, dev){
-        global.log('track_ip_changes()');
+        //global.log('track_ip_changes()');
         // real IP change
         if (this.macs[pos_dev].ip !== '0.0.0.0' && this.macs[pos_dev].ip.indexOf('169.254.') === -1 &&
                 dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
-            return "IP Change (previous = " + this.macs[pos_dev].ip + ')';
+            return "IP Change (previous: " + this.macs[pos_dev].ip + ')';
         }
         // real IP acquired
         else if ((this.macs[pos_dev].ip === '0.0.0.0' || this.macs[pos_dev].ip.indexOf('169.254.') !== -1) &&
@@ -159,7 +172,7 @@ function ArpSentinel(){
         // start searching for an IP
         else if (this.macs[pos_dev].ip !== '0.0.0.0' &&
                 this.macs[pos_dev].ip.indexOf('169.254.') === -1 && dev.ip === '0.0.0.0'){
-            return "IP lost (previous = " + this.macs[pos_dev].ip + ')';
+            return "IP lost (previous: " + this.macs[pos_dev].ip + ')';
         }
         else if (dev.ip.indexOf('169.254.') !== -1 && this.macs[pos_dev].ip === '0.0.0.0'){
             return "Failed to get IP from DHCP (again)";
@@ -199,6 +212,34 @@ function ArpSentinel(){
 
     this.add_alert = function(data){
         this.alerts.push(data);
+    };
+
+    /**
+     * Add or remove which alerts to display to the user.
+     *
+     * @param {boolean} _state - state of the switch pressed
+     * @param {number} _alert_id - alert id
+     */
+    this.handle_show_alerts = function(_state, _alert_id){
+        var pos = this.show_alerts.indexOf(_alert_id);
+        if (_state === true && pos === -1){
+            this.show_alerts.push(_alert_id);
+        }
+        else if (_state === false && pos !== -1){
+            this.show_alerts.splice(pos, 1);
+        }
+    };
+
+    this.is_alert_id_enabled = function(_alert_id){
+        return (this.show_alerts.indexOf(_alert_id) === -1) ? false : true;
+    };
+
+    this.set_alert_level = function(_alert_id){
+        this.current_alert_level = _alert_id;
+    };
+
+    this.get_alert_level = function(){
+        return this.current_alert_level;
     };
 
     this.get_devices_num = function(){
@@ -284,5 +325,6 @@ function ArpSentinel(){
 
     this.destroy = function(){
         this.reset_lists();
+        this.show_alerts.length = 0;
     };
 }

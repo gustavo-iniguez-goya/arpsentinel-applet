@@ -214,19 +214,6 @@ ARPSentinelApplet.prototype = {
         this.pref_alert_whitelisted = false;
         // TODO: reset macs/alerts on net wakeup
         // this.pref_reset_on_wakeup = true;
-        // TODO: allow to only display certain alerts
-        this.pref_show_alerts = [];
-        this.pref_show_alerts.push(Constants.ALERT_IP_CHANGE);
-        this.pref_show_alerts.push(Constants.ALERT_UNAUTH_ARP);
-        this.pref_show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
-        this.pref_show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
-        this.pref_show_alerts.push(Constants.ALERT_ETHER_NOT_ARP );
-        this.pref_show_alerts.push(Constants.ALERT_MAC_BL);
-        this.pref_show_alerts.push(Constants.ALERT_MAC_NOT_BL);
-        this.pref_show_alerts.push(Constants.ALERT_MAC_NEW);
-        this.pref_show_alerts.push(Constants.ALERT_MAC_CHANGE);
-        this.pref_show_alerts.push(Constants.ALERT_MAC_EXPIRED);
-        this.current_alert_level = '-1';
 
         this._bind_settings();
 
@@ -274,7 +261,10 @@ ARPSentinelApplet.prototype = {
             Settings.BindingDirection.IN,
             Constants.PREF_HARDENING_MODE,
             "pref_hardening_mode",
-            emptyCallback);
+            Lang.bind(this, function(state){
+                this.pref_hardening_mode = state;
+                this.menuPrefs.setToggleState(state);
+            }));
 
         this.settings.bindProperty(
             Settings.BindingDirection.BIDRECTIONAL,
@@ -282,7 +272,7 @@ ARPSentinelApplet.prototype = {
             "pref_check_https",
             Lang.bind(this, function(state){
                 this.pref_check_https = state;
-                this.menuHttps.toggle();
+                this.menuHttps.setToggleState(state);
             }));
 
         this.settings.bindProperty(
@@ -290,11 +280,11 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_HTTPS_INTERVAL,
             "pref_https_interval",
             Lang.bind(this, function(interval){
-                if (this.pref_check_https === false || interval === '' || interval === undefined || interval < 10 || interval === this.pref_https_interval){
+                if (this.pref_check_https === false || interval === '' ||
+                        interval === undefined || interval < 10 ||
+                        interval === this.pref_https_interval){
                     return;
                 }
-                // pref_https_interval is an entry widget, thus it expects strings, not integer.
-                // kontuz here, because if we save integer values, the options window does not show up.
                 this.pref_https_interval = interval;
                 //global.log('HTTPS INTERVAL: ' + interval);
                 if (this.pref_check_https === true){
@@ -321,16 +311,10 @@ ARPSentinelApplet.prototype = {
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
-            Constants.PREF_ALERT_IP_CHANGE,
-            "pref_alert_ip_change",
+            Constants.PREF_ALERT_MAC_BL,
+            "pref_alert_bl",
             Lang.bind(this, function(state){
-                var pos = this.pref_show_alerts.indexOf(Constants.ALERT_IP_CHANGE);
-                if (state === true && pos === -1){
-                    this.pref_show_alerts.push(Constants.ALERT_IP_CHANGE);
-                }
-                else if (state === false && pos !== -1){
-                    this.pref_show_alerts.splice(pos, 1);
-                }
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_MAC_BL);
             }));
 
         this.settings.bindProperty(
@@ -338,13 +322,7 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_ALERT_MAC_NOT_WL,
             "pref_alert_mac_not_wl",
             Lang.bind(this, function(state){
-                var pos = this.pref_show_alerts.indexOf(Constants.ALERT_MAC_NOT_WL);
-                if (state === true && pos === -1){
-                    this.pref_show_alerts.push(Constants.ALERT_MAC_NOT_WL);
-                }
-                else if (state === false && pos !== -1){
-                    this.pref_show_alerts.splice(pos, 1);
-                }
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_MAC_NOT_WL);
             }));
 
         this.settings.bindProperty(
@@ -352,13 +330,7 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_ALERT_IP_CHANGE,
             "pref_alert_ip_change",
             Lang.bind(this, function(state){
-                var pos = this.pref_show_alerts.indexOf(Constants.ALERT_IP_CHANGE);
-                if (state === true && pos === -1){
-                    this.pref_show_alerts.push(Constants.ALERT_IP_CHANGE);
-                }
-                else if (state === false && pos !== -1){
-                    this.pref_show_alerts.splice(pos, 1);
-                }
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_IP_CHANGE);
             }));
 
         this.settings.bindProperty(
@@ -366,13 +338,7 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_ALERT_GLOBAL_FLOOD,
             "pref_alert_global_flood",
             Lang.bind(this, function(state){
-                var pos = this.pref_show_alerts.indexOf(Constants.ALERT_GLOBAL_FLOOD);
-                if (state === true && pos === -1){
-                    this.pref_show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
-                }
-                else if (state === false && pos !== -1){
-                    this.pref_show_alerts.splice(pos, 1);
-                }
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_GLOBAL_FLOOD);
             }));
 
         this.settings.bindProperty(
@@ -380,20 +346,24 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_ALERT_TOO_MUCH_ARP,
             "pref_alert_too_much_arp",
             Lang.bind(this, function(state){
-                var pos = this.pref_show_alerts.indexOf(Constants.ALERT_TOO_MUCH_ARP);
-                if (state === true && pos === -1){
-                    this.pref_show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
-                }
-                else if (state === false && pos !== -1){
-                    this.pref_show_alerts.splice(pos, 1);
-                }
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_TOO_MUCH_ARP);
             }));
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
-            Constants.PREF_ALERT_MAC_BL,
-            "pref_alert_mac_bl",
-            emptyCallback);
+            Constants.PREF_ALERT_ETHER_NOT_ARP,
+            "pref_alert_ether_not_arp",
+            Lang.bind(this, function(state){
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_ETHER_NOT_ARP);
+            }));
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            Constants.PREF_ALERT_MAC_NEw,
+            "pref_alert_mac_new",
+            Lang.bind(this, function(state){
+                this.arpSentinel.handle_show_alerts(state, Constants.ALERT_MAC_NEW);
+            }));
 
         this.settings.bindProperty(
             Settings.BindingDirection.BIDIRECTIONAL,
@@ -417,7 +387,7 @@ ARPSentinelApplet.prototype = {
         this.menu.toggle();
         this.set_applet_icon_name( Constants.ICON_SECURITY_LOW );
         this.update_devices_list();
-        this.current_alert_level = '-1';
+        this.arpSentinel.set_alert_level(Constants.ALERT_NONE);
     },
 
     on_applet_removed_from_panel: function(conf){
@@ -463,12 +433,12 @@ ARPSentinelApplet.prototype = {
         this.menuHttps.setToggleState(this.pref_check_https);
         this.menu.addMenuItem(this.menuHttps, 0);
 
-        let itPrefs = new PopupMenu.PopupSwitchMenuItem("Auto blacklist non whitelisted MACs", true);
-        itPrefs.connect('toggled', Lang.bind(this, function(_item, state) {
+        this.menuPrefs = new PopupMenu.PopupSwitchMenuItem("Auto blacklist non whitelisted MACs", true);
+        this.menuPrefs.connect('toggled', Lang.bind(this, function(_item, state) {
             this.pref_hardening_mode = state;
         }));
-        itPrefs.setToggleState(this.pref_hardening_mode);
-        this.menu.addMenuItem(itPrefs, 1);
+        this.menuPrefs.setToggleState(this.pref_hardening_mode);
+        this.menu.addMenuItem(this.menuPrefs, 1);
 
         let itReset = new PopupMenu.PopupIconMenuItem("Reset", 'view-refresh', St.IconType.SYMBOLIC);
         itReset.connect('activate', Lang.bind(this, function(_item, event) {
@@ -530,8 +500,12 @@ ARPSentinelApplet.prototype = {
      * Adds a new entry to the list of received alerts
      */
     add_alert: function(_text, data, _icon){
+        //if (this.arpSentinel.is_alert_id_enabled(data.type) === false){
+        //        global.log('Alert not in list: ' + data.type);
+        //        return;
+        //}
+        this.arpSentinel.set_alert_level(data.type);
         this.set_applet_icon_name(_icon);
-        this.current_alert_level = data.type;
         this.arpSentinel.add_alert(data);
         
         let dateFormat = _("%Y/%m/%d %H:%M:%S");
@@ -542,8 +516,8 @@ ARPSentinelApplet.prototype = {
                 '\n  IP: \t\t' + data.ip + 
                 '\n  DEVICE: \t' + data.device + 
                 '\n  VENDOR: \t' + data.vendor;
-        // TODO: monitor current_alert_level, and make a callback
-        if (this.current_alert_level === Constants.ALERT_ETHER_NOT_ARP){
+        if (this.arpSentinel.get_alert_level() === Constants.ALERT_ETHER_NOT_ARP &&
+            this.arpSentinel.is_alert_id_enabled(Constants.ALERT_ETHER_NOT_ARP) === true){
             this.notifications.show('WARNING!! Possible ARP spoofing in course',
                 'There might be an ARP spoofing in course. Details:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL,
@@ -551,8 +525,8 @@ ARPSentinelApplet.prototype = {
             );
             Mainloop.timeout_add(600, Lang.bind(this, this._blink_alert), 1);
         }
-        else if (this.current_alert_level === Constants.ALERT_GLOBAL_FLOOD &&
-            this.pref_show_alerts.indexOf(Constants.ALERT_GLOBAL_FLOOD) !== -1){
+        else if (this.arpSentinel.get_alert_level() === Constants.ALERT_GLOBAL_FLOOD &&
+            this.arpSentinel.is_alert_id_enabled(Constants.ALERT_GLOBAL_FLOOD) === true){
             this.notifications.show('WARNING! Global flood detected',
                 'There might be an ARP scan in course, or something worst. Details:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL,
@@ -560,8 +534,8 @@ ARPSentinelApplet.prototype = {
             );
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
-        else if (this.current_alert_level === Constants.ALERT_TOO_MUCH_ARP &&
-            this.pref_show_alerts.indexOf(Constants.ALERT_TOO_MUCH_ARP) !== -1){
+        else if (this.arpSentinel.get_alert_level() === Constants.ALERT_TOO_MUCH_ARP &&
+            this.arpSentinel.is_alert_id_enabled(Constants.ALERT_TOO_MUCH_ARP) === true){
             this.notifications.show('WARNING!',
                 '<b>This device is sending too much ARPs</b>\n\nDetails:\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL,
@@ -569,7 +543,8 @@ ARPSentinelApplet.prototype = {
             );
             Mainloop.timeout_add(800, Lang.bind(this, this._blink_alert), 1);
         }
-        else if (this.current_alert_level === Constants.ALERT_IP_DUPLICATED){
+        else if (this.arpSentinel.get_alert_level() === Constants.ALERT_IP_DUPLICATED &&
+            this.arpSentinel.is_alert_id_enabled(Constants.ALERT_IP_DUPLICATED) === true){
             this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
@@ -578,8 +553,8 @@ ARPSentinelApplet.prototype = {
             );
             Mainloop.timeout_add(1000, Lang.bind(this, this._blink_alert), 1);
         }
-        else if (this.current_alert_level === Constants.ALERT_MAC_CHANGE &&
-            this.pref_show_alerts.indexOf(Constants.ALERT_MAC_CHANGE) !== -1){
+        else if (this.arpSentinel.get_alert_level() === Constants.ALERT_MAC_CHANGE &&
+            this.arpSentinel.is_alert_id_enabled(Constants.ALERT_MAC_CHANGE) === true){
             this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
@@ -598,7 +573,7 @@ ARPSentinelApplet.prototype = {
         subItem.connect('activate', Lang.bind(this, function(_item, ev){
             this.clipboard.set_text(_item.label.text);
         }));
-        this.menu.addMenuItem(itAlert, 4);
+        this.menu.addMenuItem(itAlert, 5);
         //this.scrollbox.add(itAlert.actor);
         
         itAlert.menu.addMenuItem(subItem);
@@ -615,7 +590,7 @@ ARPSentinelApplet.prototype = {
     },
 
     _blink_alert: function(state){
-        if (this.current_alert_level !== Constants.ALERT_GLOBAL_FLOOD){
+        if (this.arpSentinel.get_alert_level() !== Constants.ALERT_GLOBAL_FLOOD){
             this.actor.style_class = '';
             return false;
         }
@@ -729,7 +704,8 @@ ARPSentinelApplet.prototype = {
         if (this.pref_max_items_in_list !== 0 && this.menu._getMenuItems().length > this.pref_max_items_in_list){
             this._clear_list();
         }
-        if (this.pref_max_devices > 0 && this.arpSentinel.get_devices_num() > 0 && (this.arpSentinel.get_devices_num()+1) > this.pref_max_devices){
+        if (this.pref_max_devices > 0 && this.arpSentinel.get_devices_num() > 0 &&
+                (this.arpSentinel.get_devices_num()+1) > this.pref_max_devices){
             this.notifications.show('WARNING! Too many devices detected on the LAN',
                 'Max devices configured: ' + this.pref_max_devices
                 + '\nDevice detected:'

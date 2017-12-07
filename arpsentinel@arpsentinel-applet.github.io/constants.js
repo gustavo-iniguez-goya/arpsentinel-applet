@@ -54,6 +54,7 @@ const ARPSENTINEL_HOME = AppletDir + '/data';
 const MACLIST_BL = GLib.get_home_dir() + '/.' + AppletName +'/maclist.deny';
 const MACLIST_WL = GLib.get_home_dir() + '/.'+ AppletName + '/maclist.allow';
 
+const ALERT_NONE      =     '-1';
 const ALERT_IP_CHANGE =     '0';
 // XXX: action -> add to whitelist
 // XXX: action -> add to blacklist
