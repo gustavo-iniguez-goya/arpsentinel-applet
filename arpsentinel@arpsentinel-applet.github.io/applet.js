@@ -200,6 +200,7 @@ ARPSentinelApplet.prototype = {
         // this.pref_reset_on_wakeup = true;
 
         this._bind_settings();
+        this._start_monitoring_https();
 
         this.clipboard = St.Clipboard.get_default();
         this.menuManager = new PopupMenu.PopupMenuManager(this);
