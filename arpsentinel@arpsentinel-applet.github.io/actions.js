@@ -56,6 +56,9 @@ function is_whitelisted(dev){
     for (var i=0,len=wl_devs.length;i < len;i++){
         // first we find the ip.
         // if it's in the wl list, check if the ip-mac tuple equals
+        if (wl_devs[i][0] === '#'){
+            continue;
+        }
         if (wl_devs[i].indexOf(dev.ip) !== -1 &&
             macs_in_whitelist.toUpperCase().indexOf(dev.mac.toUpperCase() + " " + dev.ip.toUpperCase()) === -1){
             global.log('is_whitelisted: FOUND, ' + wl_devs[i]);

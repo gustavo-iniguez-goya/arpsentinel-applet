@@ -616,8 +616,16 @@ ARPSentinelApplet.prototype = {
                 if (this.pref_check_https === false){
                     break;
                 }
+                if (ds[i][0] === '#'){
+                    global.log('EXCLUDING DOMAIN: ' + ds[i]);
+                    continue;
+                }
 
                 let d = ds[i].split(' ');
+                if (d.length === 1){
+                    global.log('BAD DOMAIN: ' + ds[i]);
+                    continue;
+                }
                 //let openssl_cmd = ['openssl s_client -showcerts -connect ' + d[0] + ':443 -servername ' + d[0] + ' </dev/null | openssl x509 -fingerprint -noout'];
                 let openssl_cmd = [ AppletDir + '/bin/check_https.sh', d[0] ];
                 checker.spawn('./', openssl_cmd, GLib.SpawnFlags.SEARCH_PATH, (line) => {
