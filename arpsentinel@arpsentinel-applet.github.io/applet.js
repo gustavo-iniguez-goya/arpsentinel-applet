@@ -35,6 +35,7 @@ const Gio = imports.gi.Gio;
 const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
 const St = imports.gi.St;
+const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
 const Mainloop = imports.mainloop;
@@ -54,6 +55,7 @@ const Actions = AppletObj.actions;
 const Spawn = AppletObj.spawn;
 const ArpSentinelObj = AppletObj.arpsentinel;
 const NotificationsManager = AppletObj.notifications;
+const SubMenuMenuItem = AppletObj.submenumenuitem;
 
 /**
  * TODOS:
@@ -159,24 +161,6 @@ const ArpSentinelService = new Lang.Class({
         this.ADProxy = null;
     }
 });
-
-function MenuItem() {
-    this._init.apply(this, arguments);
-}
-
-MenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function(icon, text, data, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-        this.icon = icon;
-        this.addActor(this.icon);
-        this.label = new St.Label({
-            text: text
-        });
-        this.addActor(this.label);
-    }
-};
 
 function ARPSentinelApplet(orientation, panel_height, instance_id) {
     this._init(orientation, panel_height, instance_id);
@@ -568,7 +552,8 @@ ARPSentinelApplet.prototype = {
                  icon_type: St.IconType.FULLCOLOR,
                  icon_size: 24 });
         let itAlert = new PopupMenu.PopupSubMenuMenuItem(_text);
-        itAlert.addActor(ic);
+        itAlert.addActor(ic, { span: 0 });
+        //let itAlert = new SubMenuMenuItem.SubMenuMenuItem(_icon, _text);
         let subItem = new PopupMenu.PopupMenuItem(alert_details);
         subItem.connect('activate', Lang.bind(this, function(_item, ev){
             this.clipboard.set_text(_item.label.text);
