@@ -491,7 +491,6 @@ ARPSentinelApplet.prototype = {
         //}
         this.arpSentinel.set_alert_level(data.type);
         this.set_applet_icon_name(_icon);
-        this.arpSentinel.add_alert(data);
         
         let dateFormat = _("%Y/%m/%d %H:%M:%S");
         let displayDate = new Date();
@@ -532,6 +531,7 @@ ARPSentinelApplet.prototype = {
             this.arpSentinel.is_alert_id_enabled(Constants.ALERT_IP_DUPLICATED) === true){
             this.notifications.show('WARNING! ',
                 '<b>' + _text + '</b>'
+                + '\n(This also may indicate that an ARP spoofing in course)'
                 + '\n\nDetails:\n\n' + alert_details, _icon,
                 Tray.Urgency.CRITICAL,
                 this.notifications.TYPE_IP_DUPLICATED
@@ -573,6 +573,8 @@ ARPSentinelApplet.prototype = {
             //global.log('add_alert, auto blacklisting mac: ' + data.mac);
             Actions.add_blacklist_mac(data, false);
         }
+        data['title'] = _text;
+        this.arpSentinel.add_alert(data);
     },
 
     _blink_alert: function(state){
