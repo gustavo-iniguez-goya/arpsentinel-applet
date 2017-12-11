@@ -81,17 +81,17 @@ function ArpSentinel(){
             case Constants.ALERT_MAC_NOT_WL:
                 alert_text = 'Unknown';
                 pos_dev = this.get_device_by_mac(data.mac);
-                if (pos_dev > -1 && this.macs[pos_dev].ip !== data.ip){
-                    _alert_text = this._track_ip_changes(pos_dev, data);
-                    if (_alert_text !== null){
-                        alert_text = _alert_text;
-                    }
-                    data.type = Constants.ALERT_IP_CHANGE;
-                    this.macs[pos_dev] = data;
-                }
-                else if (pos_dev > -1 && this.macs[pos_dev].ip === data.ip && 
+                if (pos_dev > -1 && this.macs[pos_dev].ip === data.ip && 
                          this.macs[pos_dev].mac === data.mac){
                     return;
+                }
+                _alert_text = this._track_ip_changes(pos_dev, data);
+                if (_alert_text !== null){
+                    alert_text = _alert_text;
+                    data.type = Constants.ALERT_IP_CHANGE;
+                    if (pos_dev > -1){
+                        this.macs[pos_dev] = data;
+                    }
                 }
                 //add_blacklist_mac( data );
                 break;
@@ -101,6 +101,10 @@ function ArpSentinel(){
             case '8':
             case Constants.ALERT_MAC_NEW:
                 alert_text = 'New MAC';
+                _alter = this._track_ip_changes(pos_dev, data);
+                if (_alter !== null){
+                    alert_text = alert_text + '/' + _alter;
+                }
                 break;
             case Constants.ALERT_UNAUTH_ARP:
                 alert_text = 'Unauthorized ARP';
@@ -158,6 +162,12 @@ function ArpSentinel(){
      *
      */
     this._track_ip_changes = function(pos_dev, dev){
+        if (pos_dev === -1 && dev.ip === '0.0.0.0'){
+            return "Unknown/Requesting new IP";
+        }
+        if (this.macs[pos_dev] === undefined){
+                return null;
+        }
         // real IP change
         if (this.macs[pos_dev].ip !== '0.0.0.0' && this.macs[pos_dev].ip.indexOf('169.254.') === -1 &&
                 dev.ip !== '0.0.0.0' && dev.ip.indexOf('169.254.') === -1){
