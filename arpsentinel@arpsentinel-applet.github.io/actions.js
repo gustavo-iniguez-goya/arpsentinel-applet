@@ -85,7 +85,7 @@ function add_whitelist_mac(data, force){
 //  global.log('ACTIONS WL');
     if (data.mac.split(':').length !== 6){
         global.log('ACTIONS WL, BAD MAC: ' + data.mac);
-        return;
+        return macs_in_whitelist;
     }
 
     let file = Gio.file_new_for_path(Constants.MACLIST_WL);
