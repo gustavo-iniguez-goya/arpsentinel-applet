@@ -3,8 +3,10 @@ cinnamon applet for monitor events on the LAN, using arpalert.
 
 #### WIP
 
-* gnome-shell code not added to the repo yet, and it lacks some features.
 * The MITM feature is just a PoC, experimental. A service like https://checkmyhttps.net/ would be more suitable.
+In any case, this will only work for HTTPS.
+* Detect network and devices changes, and enable/disable checks on demand, or clean the devices list.
+* Check out DHCP, DNS and route config.
 
 ## Installation
 - `apt-get install arpalert` || `dnf install arpalert` || `yum install arpalert`
@@ -35,12 +37,15 @@ cinnamon applet for monitor events on the LAN, using arpalert.
 
 ----
 
-## TODOs / Ideas
+## TODOs / Ideas (where someone (you!) could work on)
 * Allow to filter/search devices list by ip/mac/vendor.
 * Make the devices list scrollable.
 * Allow to scan a device.
-* Manually/Periodically scan the network.
+* Manually/Periodically scan the network on demand.
 * Script to block malicious devices (manually and based on certain events).
+* Create a GUI to do all the above.
+* Fix devices list, and put the icon on the left.
+* finish/complete gnome-shell extension.
 * Translations.
 
 ----
