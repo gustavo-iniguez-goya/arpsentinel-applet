@@ -693,7 +693,8 @@ ARPSentinelApplet.prototype = {
      *
      */
     _check_trusted_devices: function(dev, title){
-        if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== ''){
+        if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== '' &&
+            dev.type !== Constants.ALERT_MAC_EXPIRED){
             let trusted_dev = Actions.is_whitelisted(dev);
             if (trusted_dev !== false){
                 this.notifications.show('WARNING! ' + title,
