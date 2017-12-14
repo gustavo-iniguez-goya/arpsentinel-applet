@@ -16,6 +16,10 @@
 */
 const AppletUUID = 'arpsentinel@arpsentinel-applet.github.io';
 
+const NMClient = imports.gi.NMClient;
+const NetworkManager = imports.gi.NetworkManager;
+const Lang = imports.lang;
+
 /* local imports */
 const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
 const AppletObj = imports.ui.appletManager.applets[AppletUUID];
@@ -24,22 +28,55 @@ const Constants = imports.constants;
 const Actions = AppletObj.actions;
 
 function ArpSentinel(){
-    this.macs = [];
-    this.alerts = [];
-    this.show_alerts = [];
-    this.show_alerts.push(Constants.ALERT_IP_CHANGE);
-    this.show_alerts.push(Constants.ALERT_UNAUTH_ARP);
-    this.show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
-    this.show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
-    this.show_alerts.push(Constants.ALERT_ETHER_NOT_ARP);
-    this.show_alerts.push(Constants.ALERT_MAC_BL);
-    this.show_alerts.push(Constants.ALERT_MAC_NOT_WL);
-    this.show_alerts.push(Constants.ALERT_MAC_NEW);
-    this.show_alerts.push(Constants.ALERT_MAC_CHANGE);
-    this.show_alerts.push(Constants.ALERT_MAC_EXPIRED);
-    this.show_alerts.push(Constants.ALERT_IP_DUPLICATED);
-        global.log('ALERTS: ' + this.show_alerts.length);
-    this.current_alert_level = Constants.ALERT_NONE;
+    this._init();
+}
+
+ArpSentinel.prototype = {
+    _init: function(){
+        this.macs = [];
+        this.alerts = [];
+        this.show_alerts = [];
+        this.show_alerts.push(Constants.ALERT_IP_CHANGE);
+        this.show_alerts.push(Constants.ALERT_UNAUTH_ARP);
+        this.show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
+        this.show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
+        this.show_alerts.push(Constants.ALERT_ETHER_NOT_ARP);
+        this.show_alerts.push(Constants.ALERT_MAC_BL);
+        this.show_alerts.push(Constants.ALERT_MAC_NOT_WL);
+        this.show_alerts.push(Constants.ALERT_MAC_NEW);
+        this.show_alerts.push(Constants.ALERT_MAC_CHANGE);
+        this.show_alerts.push(Constants.ALERT_MAC_EXPIRED);
+        this.show_alerts.push(Constants.ALERT_IP_DUPLICATED);
+        this.current_alert_level = Constants.ALERT_NONE;
+
+        this._client = NMClient.Client.new();
+    },
+
+    /**
+     * Get latest known connectivity state
+     *
+     */
+    get_connectivity: function(){
+        return this._client.get_connectivity();
+    },
+
+    /**
+     * React to connectivity changes
+     *
+     * @param {function} callback - return the new connectivity state
+     */
+    on_connectivity_change: function(callback){
+        this._devices = this._client.get_devices();
+        for (let i=0,len=this._devices.length; i < len;i++){
+            if (this._devices[i].get_iface() === 'lo'){
+                continue;
+            }
+            this._devices[i].connect('notify::state', Lang.bind(this,
+                function(_dev, new_state, old_state, reason){
+                    callback(this._client.get_connectivity());
+            }));
+        }
+    },
     
     /**
      * Adds a new entry to the list of alerts.
@@ -49,8 +86,8 @@ function ArpSentinel(){
      * @param {string} pos_dev - device index
      * @param {string} pos_dupe - position of the the duplicated IP
      */
-    this.buildAlert = function(data, pos, pos_dev, dupe_dev, callback) {
-        var _icon = Constants.ICON_SECURITY_LOW;
+    buildAlert: function(data, pos, pos_dev, dupe_dev, callback) {
+        let _icon = Constants.ICON_SECURITY_LOW;
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -150,7 +187,7 @@ function ArpSentinel(){
                 alert_text = 'Unknown event';
         }
         callback(alert_text + ': ' + data.mac, data, _icon);
-    };
+    },
 
 
     /**
@@ -161,7 +198,7 @@ function ArpSentinel(){
      * @return {string} The type of IP change, or null if nothing
      *
      */
-    this._track_ip_changes = function(pos_dev, dev){
+    _track_ip_changes: function(pos_dev, dev){
         if (pos_dev === -1 && dev.ip === '0.0.0.0'){
             return "Unknown/Requesting new IP";
         }
@@ -194,7 +231,7 @@ function ArpSentinel(){
         }
 
         return null;
-    };
+    },
     
     /**
      * Check if we've seen 2 devices with the same IP.
@@ -202,26 +239,26 @@ function ArpSentinel(){
      * @param {onject} dev - The new device to check.
      * @return {object} The device which as an IP conflict, or -1 if none.
      */
-    this.check_ip_conflict = function(dev){
+    check_ip_conflict: function(dev){
         if (this.macs.length < 2 || dev.ip === '0.0.0.0'){
             return -1;
         }
-        for (var i = this.macs.length-1; i > -1; i--){
+        for (let i = this.macs.length-1; i > -1; i--){
             if (this.macs[i].ip === dev.ip && this.macs[i].mac !== dev.mac){
                 return this.macs[i];
             }
         }
 
         return -1;
-    };
+    },
 
-    this.add_device = function(dev){
+    add_device: function(dev){
         this.macs.push(dev);
-    };
+    },
 
-    this.add_alert = function(data){
+    add_alert: function(data){
         this.alerts.push(data);
-    };
+    },
 
     /**
      * Add or remove which alerts to display to the user.
@@ -229,31 +266,31 @@ function ArpSentinel(){
      * @param {boolean} _state - state of the switch pressed
      * @param {number} _alert_id - alert id
      */
-    this.handle_show_alerts = function(_state, _alert_id){
-        var pos = this.show_alerts.indexOf(_alert_id);
+    handle_show_alerts: function(_state, _alert_id){
+        let pos = this.show_alerts.indexOf(_alert_id);
         if (_state === true && pos === -1){
             this.show_alerts.push(_alert_id);
         }
         else if (_state === false && pos !== -1){
             this.show_alerts.splice(pos, 1);
         }
-    };
+    },
 
-    this.is_alert_id_enabled = function(_alert_id){
+    is_alert_id_enabled: function(_alert_id){
         return (this.show_alerts.indexOf(_alert_id) === -1) ? false : true;
-    };
+    },
 
-    this.set_alert_level = function(_alert_id){
+    set_alert_level: function(_alert_id){
         this.current_alert_level = _alert_id;
-    };
+    },
 
-    this.get_alert_level = function(){
+    get_alert_level: function(){
         return this.current_alert_level;
-    };
+    },
 
-    this.get_devices_num = function(){
+    get_devices_num: function(){
         return this.macs.length;
-    };
+    },
 
     /**
      * get device index in the list
@@ -263,9 +300,9 @@ function ArpSentinel(){
      *
      * @return {object} The device index in the list.
      */
-    this.get_device_index = function(data){
+    get_device_index: function(data){
         // array.map() seems to not work
-        for (var i = 0, len=this.macs.length; i < len; i++){
+        for (let i = 0, len=this.macs.length; i < len; i++){
             // ignore duplicated alerts
             if (this.macs[i].mac === data.mac){
                 return i;
@@ -274,16 +311,16 @@ function ArpSentinel(){
         }
 
         return -1;
-    };
+    },
 
     /**
      * return alert index
      *
      * @return {object} The device index in the list.
      */
-    this.get_alert_index = function(dev){
+    get_alert_index: function(dev){
         // array.map() seems to not work
-        for (var i = 0, len=this.alerts.length; i < len; i++){
+        for (let i = 0, len=this.alerts.length; i < len; i++){
             // ignore duplicated alerts
             if (this.alerts[i].mac === dev.mac && 
                 this.alerts[i].ip === dev.ip && 
@@ -296,44 +333,44 @@ function ArpSentinel(){
         }
 
         return -1;
-    };
+    },
 
     /**
      * get a device given its MAC
      *
      * @return {object} The device index in the list.
      */
-    this.get_device_by_mac = function(mac){
-        for (var i = this.macs.length-1; i > -1; i--){
+    get_device_by_mac: function(mac){
+        for (let i = this.macs.length-1; i > -1; i--){
             if (this.macs[i].mac === mac){
                 return i;
                 break;
             }
         }
         return -1;
-    };
+    },
 
     /**
      * Removes a device from the list by its MAC address.
      *
      */
-    this.remove_device_by_mac = function(mac){
-        var idx = this.get_device_by_mac(mac);
+    remove_device_by_mac: function(mac){
+        let idx = this.get_device_by_mac(mac);
         if (idx !== -1){
-            var ret = this.macs.slice(idx,1);
+            let ret = this.macs.slice(idx,1);
    //         this.update_devices_list();
             return ret;
         }
         return false;
-    };
+    },
 
-    this.reset_lists = function(){
+    reset_lists: function(){
         this.alerts = [];
         this.macs = [];
-    };
+    },
 
-    this.destroy = function(){
+    destroy: function(){
         this.reset_lists();
         this.show_alerts.length = 0;
-    };
+    }
 }
