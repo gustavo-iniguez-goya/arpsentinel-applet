@@ -42,8 +42,7 @@ const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
 const Signals = imports.signals;
 const Tray = imports.ui.messageTray;
-
-let panel_text = null;
+const NetworkManager = imports.gi.NetworkManager;
 
 /* local imports */
 const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
@@ -118,7 +117,7 @@ const ArpSentinelService = new Lang.Class({
             Lang.bind(this, function(proxy, senderName, 
                 [mac_orig, ip_orig, x, device, alert_type, mac_vendor]) {
                 //global.log('New alert. mac: ' + mac_orig + ' ip: ' + ip_orig + ' device: ' + device + ' type: ' + alert_type + ' vendor: ' + mac_vendor);
-                    var data = {
+                    let data = {
                         mac: mac_orig, 
                         ip: ip_orig, 
                         str: x, 
@@ -126,8 +125,8 @@ const ArpSentinelService = new Lang.Class({
                         type: alert_type, 
                         vendor: mac_vendor
                     };
-                var pos_dev = -1;
-                var pos_alert = -1;
+                let pos_dev = -1;
+                let pos_alert = -1;
                 pos_dev = this.arpSentinel.get_device_index(data);
                 if (pos_dev === -1){
                     this.arpSentinel.buildAlert(data, pos_alert, pos_dev, -1,
@@ -137,7 +136,7 @@ const ArpSentinelService = new Lang.Class({
                         });
                     return;
                 }
-                var dupe_dev = this.arpSentinel.check_ip_conflict(data);
+                let dupe_dev = this.arpSentinel.check_ip_conflict(data);
                 if (dupe_dev !== -1){
                     data.type = Constants.ALERT_IP_DUPLICATED;
                 }
@@ -173,14 +172,14 @@ ARPSentinelApplet.prototype = {
     _init: function(metadata, orientation, panel_height, instance_id) {
         Applet.TextIconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
 
-        // there're 2 types of list:
-        // - macs: unique devices seen on the lan
-        // - alerts: list of alerts received (dup alerts are ignored, see below)
         this.display_id = 0;
         this.instance_id = instance_id;
         this.orientation = orientation;
         this.alert_id = null;
         
+        this.arpSentinel = new ArpSentinelObj.ArpSentinel();
+        this.ARPSentinelService = new ArpSentinelService(this.arpSentinel);
+
         this.settings = new Settings.AppletSettings(this, metadata.uuid, instance_id);
         this.pref_max_devices = null;
         this.pref_max_items_in_list = 20;
@@ -205,9 +204,6 @@ ARPSentinelApplet.prototype = {
         this.clipboard = St.Clipboard.get_default();
         this.menuManager = new PopupMenu.PopupMenuManager(this);
 
-        this.arpSentinel = new ArpSentinelObj.ArpSentinel();
-        this.ARPSentinelService = new ArpSentinelService(this.arpSentinel);
-
         this.set_applet_icon_name("security-high");
         this.update_devices_list();
 
@@ -225,6 +221,23 @@ ARPSentinelApplet.prototype = {
     
         this.notifications = new NotificationsManager.Notifications();
 
+        this.arpSentinel.on_connectivity_change(
+            function(_state){
+                switch(_state){
+                    case NetworkManager.ConnectivityState.UNKNOWN:
+                    case NetworkManager.ConnectivityState.NONE:
+                    case NetworkManager.ConnectivityState.PORTAL:
+                    case NetworkManager.ConnectivityState.LIMITED:
+                        this._remove_https_monitor();
+                        break;
+                    case NetworkManager.ConnectivityState.FULL:
+                        this.arpSentinel.reset_lists();
+                        this._start_monitoring_https();
+                        break;
+                    default:
+                        break;
+                }
+            });
     },
 
     _bind_settings: function(){
@@ -381,7 +394,10 @@ ARPSentinelApplet.prototype = {
 
     update_devices_list: function(){
         this.set_text(this.arpSentinel.get_devices_num() + ' devices');
-        this.set_applet_tooltip(this.arpSentinel.get_devices_num() + ' unique devices seen so far');
+        this.set_applet_tooltip(
+            this.arpSentinel.get_devices_num() + ' unique devices seen so far\n'
+            + this.arpSentinel.alerts.length + ' alerts'
+        );
     },
 
     _clear_list: function(){
@@ -574,6 +590,7 @@ ARPSentinelApplet.prototype = {
             Actions.add_blacklist_mac(data, false);
         }
         data['title'] = _text;
+        data['timestamp'] = displayDate.getTime();
         this.arpSentinel.add_alert(data);
     },
 
@@ -599,7 +616,7 @@ ARPSentinelApplet.prototype = {
      */
     _start_monitoring_https: function(){
         //global.log('_start_https_monitor()');
-        if (this.pref_check_https === true){
+        if (this.pref_check_https === true && this.arpSentinel && this.arpSentinel.get_connectivity() === NetworkManager.ConnectivityState.FULL){
             this._https_interval_timeout_id = Mainloop.timeout_add_seconds(this.pref_https_interval, Lang.bind(this, this._check_https_integrity));
         }
     },
@@ -607,6 +624,7 @@ ARPSentinelApplet.prototype = {
     _remove_https_monitor: function(){
         //global.log('_remove_https_monitor()');
         Mainloop.source_remove(this._https_interval_timeout_id);
+        this._https_interval_timeout_id = null;
     },
 
     _check_https_integrity: function(app){
@@ -615,7 +633,7 @@ ARPSentinelApplet.prototype = {
             let checker = new Spawn.SpawnReader();
             let ds = this.pref_https_domains.split('\n');
             for (i=0, len=ds.length; i < len; i++){
-                if (this.pref_check_https === false){
+                if (this.pref_check_https === false || this.arpSentinel.get_connectivity() !== NetworkManager.ConnectivityState.FULL){
                     break;
                 }
                 if (ds[i][0] === '#'){
@@ -636,7 +654,7 @@ ARPSentinelApplet.prototype = {
                         //global.log('HTTP OK: ' + d[1]);
                     }
                     else{
-                        //global.log('HTTP K.O.');
+                        //global.log('HTTP K.O.: ' + line);
                         this.set_icon(Constants.ICON_DIALOG_WARNING);
                         // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
                         this.notifications.show('WARNING!',
@@ -721,7 +739,7 @@ ARPSentinelApplet.prototype = {
 
     destroy: function(){
         //global.log('ARP Sentinel applet destroyed');
-        this.pref_check_https = false;
+        this._remove_https_monitor();
         this.arpSentinel.destroy();
         this.ARPSentinelService.destroy();
         this.ARPSentinelService = undefined;
