@@ -278,12 +278,6 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_HTTPS_INTERVAL,
             "pref_https_interval",
             Lang.bind(this, function(interval){
-                if (this.pref_check_https === false || interval === '' ||
-                        interval === undefined || interval < 10 ||
-                        interval === this.pref_https_interval){
-                    return;
-                }
-                this.pref_https_interval = interval;
                 //global.log('HTTPS INTERVAL: ' + interval);
                 if (this.pref_check_https === true){
                     this._remove_https_monitor();
