@@ -9,6 +9,18 @@ error(){
   exit
 }
 
+check_arpalert(){
+  cmd=$(sudo which arpalert)
+  if [ "$?" != 0 ]
+  then
+      echo "[!!] You must install arpalert first: sudo apt-get install arpalert || sudo yum install arpalert"
+      echo
+      exit 1
+  fi
+}
+
+check_arpalert
+
 mkdir -p ~/.$APP_HOME/bin/ 2>/dev/null
 touch ~/.$APP_HOME/maclist.allow ~/.$APP_HOME/maclist.deny ~/.$APP_HOME/maclist.trusted
 /bin/cp ./arpalert-service.py ./arpalert.sh ~/.$APP_HOME/bin/
@@ -45,5 +57,7 @@ echo "[+] And add this line to /etc/sudoers to effectively block offenders:"
 echo "    user host = (root) NOPASSWD: $HOME/.$APP_HOME/block_mac.sh"
 
 sleep 2
+
+sudo service arpalert restart || sudo /etc/init.d/arpalert restart
 
 echo "DONE"
