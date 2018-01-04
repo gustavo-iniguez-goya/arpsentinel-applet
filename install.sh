@@ -2,7 +2,7 @@
 APP_HOME="arpsentinel-applet"
 APP_UUID="arpsentinel@$APP_HOME.github.io"
 CINNAMON_APPLETS="$HOME/.local/share/cinnamon/applets/"
-DBUS_SERVICE="[D-BUS Service]\nName=org.arpsentinel\nExec=$HOME/.$APP_HOME/bin/arpalert-service.py\nUser=arpalert"
+DBUS_SERVICE="[D-BUS Service]\nName=org.arpsentinel\nExec=\"$HOME/.$APP_HOME/bin/arpalert-service.py\"\nUser=arpalert"
 
 error(){
   [ -z "$1" ] && echo " KO" || echo "\n[-] ERROR: $1"
@@ -21,9 +21,14 @@ out=$(/bin/cp -a $APP_UUID/ $CINNAMON_APPLETS)
 [ "$?" = "0" ] && echo " OK" || error
 
 echo -n "[+] Enable ARPSentinel system service: "
-echo -e $DBUS_SERVICE
+#echo -e $DBUS_SERVICE
 out=$(/bin/echo -e $DBUS_SERVICE > arpsentinel.service.temp; sudo /bin/cp arpsentinel.service.temp /usr/share/dbus-1/system-services/org.arpsentinel.service)
-[ "$?" = "0" ] && echo " OK" || error
+if [ "$?" = "0" ]
+then
+    rm -f arpsentinel.service.temp
+else
+    echo " Error generating the DBUS service"
+fi
 out=$(sudo /bin/cp ./arpsentinel.conf /etc/dbus-1/system.d/)
 [ "$?" = "0" ] && echo " OK" || error
 
