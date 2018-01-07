@@ -222,7 +222,7 @@ ARPSentinelApplet.prototype = {
         this.notifications = new NotificationsManager.Notifications();
 
         this.arpSentinel.on_connectivity_change(
-            function(_state){
+            Lang.bind(this, function(_dev, _state){
                 switch(_state){
                     case NetworkManager.ConnectivityState.UNKNOWN:
                     case NetworkManager.ConnectivityState.NONE:
@@ -231,13 +231,13 @@ ARPSentinelApplet.prototype = {
                         this._remove_https_monitor();
                         break;
                     case NetworkManager.ConnectivityState.FULL:
-                        this.arpSentinel.reset_lists();
+                        this.reset_state();
                         this._start_monitoring_https();
                         break;
                     default:
                         break;
                 }
-            });
+            }));
     },
 
     _bind_settings: function(){
@@ -278,6 +278,7 @@ ARPSentinelApplet.prototype = {
             Constants.PREF_HTTPS_INTERVAL,
             "pref_https_interval",
             Lang.bind(this, function(interval){
+                this.pref_https_interval = interval;
                 //global.log('HTTPS INTERVAL: ' + interval);
                 if (this.pref_check_https === true){
                     this._remove_https_monitor();
@@ -437,10 +438,7 @@ ARPSentinelApplet.prototype = {
 
         let itReset = new PopupMenu.PopupIconMenuItem("Reset", 'view-refresh', St.IconType.SYMBOLIC);
         itReset.connect('activate', Lang.bind(this, function(_item, event) {
-            this.menu.removeAll();
-            this._add_sticky_menus();
-            this.arpSentinel.reset_lists();
-            this.set_text("0 devices");
+            this.reset_state();
         }));
         this.menu.addMenuItem(itReset, 2);
 
@@ -730,6 +728,13 @@ ARPSentinelApplet.prototype = {
         this._check_trusted_devices(dev, 'One of your trusted devices has changed:');
         this.arpSentinel.add_device(dev);
         this.update_devices_list();
+    },
+
+    reset_state: function(){
+        this.menu.removeAll();
+        this._add_sticky_menus();
+        this.arpSentinel.reset_lists();
+        this.set_text("0 devices");
     },
 
     destroy: function(){

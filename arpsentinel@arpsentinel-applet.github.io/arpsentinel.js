@@ -71,9 +71,9 @@ ArpSentinel.prototype = {
             if (this._devices[i].get_iface() === 'lo'){
                 continue;
             }
-            this._devices[i].connect('notify::state', Lang.bind(this,
+            this._devices[i].connect('state-changed', Lang.bind(this,
                 function(_dev, new_state, old_state, reason){
-                    callback(this._client.get_connectivity());
+                    callback(_dev, this._client.get_connectivity());
             }));
         }
     },
