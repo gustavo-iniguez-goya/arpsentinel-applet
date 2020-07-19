@@ -1,6 +1,6 @@
 /**
     ARP Sentinel applet for cinnamon panel
-    Copyright (C) 2017 Gustavo Iñiguez Goia
+    Copyright (C) 2017-2020 Gustavo Iñiguez Goia
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

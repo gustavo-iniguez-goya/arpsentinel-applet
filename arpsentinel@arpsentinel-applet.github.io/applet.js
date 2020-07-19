@@ -1,6 +1,6 @@
 /**
     ARP Sentinel applet for cinnamon panel
-    Copyright (C) 2017 Gustavo Iñiguez Goia
+    Copyright (C) 2017-2020 Gustavo Iñiguez Goia
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
 const Signals = imports.signals;
 const Tray = imports.ui.messageTray;
-const NetworkManager = imports.gi.NetworkManager;
+const NetworkManager = imports.gi.NM;
 
 /* local imports */
 const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
@@ -101,7 +101,6 @@ const ArpSentinelService = new Lang.Class({
     Name: 'ArpSentinelService',
 
     _init: function(_arpSentinel) {
-        //global.log('ArpSentinelService.init()')
         this.arpSentinel = _arpSentinel;
 
         this.ADProxy = new ARPSentinelProxy(
@@ -109,8 +108,8 @@ const ArpSentinelService = new Lang.Class({
                     "org.arpsentinel",
                     "/org/arpsentinel"
                 );
-// We can send an event back to the service.
-//        ADProxy.sendAlertSync("x", "xx", "", "xxx", "xxxxx", "xxxxxxxx");
+        // We can send an event back to the service.
+        // ADProxy.sendAlertSync("x", "xx", "", "xxx", "xxxxx", "xxxxxxxx");
 
         // getAlert is defined in the service arpdefender-service.py
         this._signalId = this.ADProxy.connectSignal(Constants.SIGNAL_EVENTS_METHOD, 
@@ -123,7 +122,8 @@ const ArpSentinelService = new Lang.Class({
                         str: x, 
                         device: device, 
                         type: alert_type, 
-                        vendor: mac_vendor
+                        vendor: mac_vendor,
+                        netname: undefined
                     };
                 let pos_dev = -1;
                 let pos_alert = -1;
@@ -154,7 +154,6 @@ const ArpSentinelService = new Lang.Class({
     },
 
     destroy: function(){
-        //global.log('ARP Sentinel Service destroyed');
         this.ADProxy.disconnect(this.ADProxy._signalId);
         Signals._disconnectAll.apply(this.ADProxy);
         this.ADProxy = null;
@@ -193,11 +192,11 @@ ARPSentinelApplet.prototype = {
         this.pref_https_domains = null;
         this._https_interval_timeout_id = null;
         this.pref_whitelisted_devices = Actions.macs_in_whitelist;
-        this.settings.setValue(Constants.PREF_WHITELISTED_DEVS, this.pref_whitelisted_devices);
         this.pref_alert_whitelisted = false;
         // TODO: reset macs/alerts on net wakeup
-        // this.pref_reset_on_wakeup = true;
+        this.pref_reset_on_wakeup = true;
 
+        this._load_settings();
         this._bind_settings();
         this._start_monitoring_https();
 
@@ -221,23 +220,69 @@ ARPSentinelApplet.prototype = {
     
         this.notifications = new NotificationsManager.Notifications();
 
-        this.arpSentinel.on_connectivity_change(
-            Lang.bind(this, function(_dev, _state){
-                switch(_state){
-                    case NetworkManager.ConnectivityState.UNKNOWN:
-                    case NetworkManager.ConnectivityState.NONE:
-                    case NetworkManager.ConnectivityState.PORTAL:
-                    case NetworkManager.ConnectivityState.LIMITED:
-                        this._remove_https_monitor();
-                        break;
-                    case NetworkManager.ConnectivityState.FULL:
-                        this.reset_state();
-                        this._start_monitoring_https();
-                        break;
-                    default:
-                        break;
-                }
-            }));
+        this.arpSentinel.on_nm_client(
+            Lang.bind(this, function(_client){
+            try{
+                this.arpSentinel.on_dhcp_change(Lang.bind(this, this._show_dhcp_settings));
+                this.arpSentinel.on_connectivity_change(
+                    Lang.bind(this, function(_dev, _state){
+                        //global.log('ArpSentinel.on_connectivity_change: ' + _dev + " - " + _state);
+                        switch(_state){
+                            case NetworkManager.ConnectivityState.UNKNOWN:
+                                global.log("CONNECTIVITY UNKNOWN");
+                            case NetworkManager.ConnectivityState.NONE:
+                                global.log("CONNECTIVITY NONE");
+                            case NetworkManager.ConnectivityState.PORTAL: // 2
+                                global.log("CONNECTIVITY PORTAL");
+                            case NetworkManager.ConnectivityState.LIMITED: // 3
+                                global.log("CONNECTIVITY LIMITED: " + _dev.get_device_type());
+                                this._show_wifi_settings(_dev);
+                                this._remove_https_monitor();
+                                break;
+                            case NetworkManager.ConnectivityState.FULL: // 4
+                                global.log("CONNECTIVITY FULL: " + _dev.get_device_type());
+                                // XXX: move to a method
+                                this._show_wifi_settings(_dev);
+                                this.reset_state();
+                                this._start_monitoring_https();
+                                break;
+                            default:
+                                break;
+                        }
+                }));
+            }
+            catch(e){
+                global.log("on_nm_client ERROR", e.message);
+            }
+        }));
+    },
+
+    /**
+     * Load settings
+     *
+     */
+    _load_settings: function(){
+        this.settings.setValue(Constants.PREF_WHITELISTED_DEVS, this.pref_whitelisted_devices);
+        this.pref_alert_whitelisted = this.settings.getValue(Constants.PREF_ALERT_WHITELISTED);
+        this.pref_max_devices = this.settings.getValue(Constants.PREF_MAX_DEVICES);
+        if (this.pref_max_devices == null){
+            this.pref_max_devices = 10;
+        }
+        if (this.settings.getValue(Constants.PREF_ALERT_IP_CHANGE) === true){
+            this.arpSentinel.add_pref_alert(Constants.ALERT_IP_CHANGE);
+        }
+        if (this.settings.getValue(Constants.PREF_ALERT_GLOBAL_FLOOD) === true){
+            this.arpSentinel.add_pref_alert(Constants.ALERT_GLOBAL_FLOOD);
+        }
+        if (this.settings.getValue(Constants.PREF_ALERT_TOO_MUCH_ARP) === true){
+            this.arpSentinel.add_pref_alert(Constants.ALERT_TOO_MUCH_ARP);
+        }
+        if (this.settings.getValue(Constants.PREF_ALERT_ETHER_NOT_ARP) === true){
+            this.arpSentinel.add_pref_alert(Constants.ALERT_ETHER_NOT_ARP);
+        }
+        if (this.settings.getValue(Constants.PREF_ALERT_MAC_NEW) === true){
+            this.arpSentinel.add_pref_alert(Constants.ALERT_MAC_NEW);
+        }
     },
 
     _bind_settings: function(){
@@ -453,6 +498,9 @@ ARPSentinelApplet.prototype = {
 
     /**
      * Adds the whitelist menu to every entry in the list
+     *
+     * @param {object} item - an entry item widget.
+     * @param {object} data - Device object with all the information.
      */
     add_whitelist_button: function(item, data){
         if (data.type == Constants.ALERT_MAC_NOT_WL || data.type == Constants.ALERT_MAC_BL){
@@ -468,6 +516,9 @@ ARPSentinelApplet.prototype = {
     
     /**
      * Adds the blacklist menu to every entry in the list
+     *
+     * @param {object} item - an entry item widget.
+     * @param {object} data - Device object with all the information.
      */
     add_blacklist_button: function(item, data){
         let label_text = "  Add to blacklist >";
@@ -505,9 +556,11 @@ ARPSentinelApplet.prototype = {
 
         let alert_details = '  Date: \t' + displayDate.toLocaleFormat(dateFormat) + 
                 '\n  MAC: \t' + data.mac + 
-                '\n  IP: \t\t' + data.ip + 
+                '\n  IP: \t\t' + data.ip + ((data.netname !== undefined) ? ' (' + data.netname + ')' : '') +
                 '\n  DEVICE: \t' + data.device + 
                 '\n  VENDOR: \t' + data.vendor;
+
+        // display a visible warning for certain types of events
         if (this.arpSentinel.get_alert_level() === Constants.ALERT_ETHER_NOT_ARP &&
             this.arpSentinel.is_alert_id_enabled(Constants.ALERT_ETHER_NOT_ARP) === true){
             this.notifications.show('WARNING!! Possible ARP spoofing in course',
@@ -597,30 +650,48 @@ ARPSentinelApplet.prototype = {
         }
         else{
             this.actor.style_class = 'blinking-alert-on';
-        //    app.set_applet_label('alert on');
         }
 
         return true;
     },
 
     /**
+     * Start monitoring ARP table.
+     */
+    _start_monitoring_arp_table: function(){
+        if (this.arpSentinel && this.arpSentinel.get_connectivity() === NetworkManager.ConnectivityState.FULL){
+            this._arp_table_timeout_id = Mainloop.timeout_add_seconds(1000 * 60, Lang.bind(this, this._check_arp_table));
+        }
+    },
+
+    _check_arp_table: function() {
+        // TODO
+    },
+
+    _remove_arp_table_monitor: function(){
+        if (this._arp_table_timeoud_id != null){
+            Mainloop.source_remove(this._arp_table_timeout_id);
+        }
+        this._arp_table_timeout_id = null;
+    },
+
+    /**
      * Start monitoring https SSL certs every n seconds.
      */
     _start_monitoring_https: function(){
-        //global.log('_start_https_monitor()');
         if (this.pref_check_https === true && this.arpSentinel && this.arpSentinel.get_connectivity() === NetworkManager.ConnectivityState.FULL){
             this._https_interval_timeout_id = Mainloop.timeout_add_seconds(this.pref_https_interval, Lang.bind(this, this._check_https_integrity));
         }
     },
 
     _remove_https_monitor: function(){
-        //global.log('_remove_https_monitor()');
-        Mainloop.source_remove(this._https_interval_timeout_id);
+        if (this._https_interval_timeoud_id != null){
+            Mainloop.source_remove(this._https_interval_timeout_id);
+        }
         this._https_interval_timeout_id = null;
     },
 
     _check_https_integrity: function(app){
-        //global.log('check_https_integrity()');
         if (this.pref_check_https === true){
             let checker = new Spawn.SpawnReader();
             let ds = this.pref_https_domains.split('\n');
@@ -646,7 +717,6 @@ ARPSentinelApplet.prototype = {
                         //global.log('HTTP OK: ' + d[1]);
                     }
                     else{
-                        //global.log('HTTP K.O.: ' + line);
                         this.set_icon(Constants.ICON_DIALOG_WARNING);
                         // XXX: Note, Notification() does not allow break lines in the title. @see /usr/share/cinnamon/js/ui/messageTray.js:573
                         this.notifications.show('WARNING!',
@@ -674,7 +744,6 @@ ARPSentinelApplet.prototype = {
             return true;
         }
         else{
-            //global.log('check_https_integrity() false, stopping');
             return false;
         }
     },
@@ -683,6 +752,8 @@ ARPSentinelApplet.prototype = {
      * display an alert, if one of the defined trusted device tuple
      * has changed.
      *
+     * @param {object} dev   - Device object.
+     * @param {string} title - Title of the notification.
      */
     _check_trusted_devices: function(dev, title){
         if (this.pref_alert_whitelisted === true && this.pref_whitelisted_devices !== '' &&
@@ -703,9 +774,69 @@ ARPSentinelApplet.prototype = {
         }
     },
 
+    _show_wifi_settings: function(dev){
+        try{
+            if (dev.get_device_type() === 2){//NM.DeviceType.WIFI){
+                var ap = dev.get_active_access_point();
+                if (ap !== null){
+                    //global.log("AP, mac: " + ap.get_bssid() + " - bitrate: " + dev.get_bitrate() + " - signal: " + ap.get_strength() + "% - " + ap.get_ssid())
+                    if (ap.get_bssid() !== null){
+                        this.notifications.show('Connected to AP ' + ap.get_bssid(),
+                            "\tStrength: "  + ap.get_strength() + "%" +
+                            "\n\tBitrate: " + (dev.get_bitrate() / 1000) + "Mb/s" +
+                            "\n\tMax Bitrate: " + ap.get_max_bitrate() / 1000 + "Mb/s",
+                            Constants.ICON_SECURITY_LOW,
+                            Tray.Urgency.CRITICAL,
+                            this.notifications.TYPE_WIFI_CHANGE
+                        );
+                    }
+                }
+            }
+        }
+        catch(e){
+            global.log("wifi settings error", e.message);
+        }
+    },
+
+    /**
+     * Show DHCP changes to the user.
+     *
+     */
+    _show_dhcp_settings: function(_dev, _new_config, _old_config, data){
+        try{
+            let dhcp4_config = _dev.get_dhcp4_config();
+            let ip4_config = _dev.get_ip4_config();
+            /*global.log('ArpSentinel.on_dhcp_change: ' + dhcp4_config + " -- " + ip4_config + " - " + _new_config + " - " + _new_config.get_name() + " - " + _new_config.qdata);
+            for (let x of Object.keys(dhcp4_config.get_options())){
+                global.log("DDD: ", x, dhcp4_config.get_one_option(x));
+            }*/
+            var notifObject = "\nConfig sent:" +
+                "\n  Gateway: " + dhcp4_config.get_one_option("routers") + " | ip4: " + ip4_config.get_gateway() +
+                "\n  IP: " + dhcp4_config.get_one_option("ip_address") + " / " + dhcp4_config.get_one_option("subnet_mask");
+            if (dhcp4_config.get_one_option("domain_name_servers") != null){
+                notifObject += "\n  DNS: " + dhcp4_config.get_one_option("domain_name_servers");
+            }
+            if (dhcp4_config.get_one_option("domain_name") != null){
+                notifObject += "\n  Domain: " + dhcp4_config.get_one_option("domain_name");
+            }
+            if (dhcp4_config.get_one_option("next_server") != null){
+                notifObject += "\n  Next Hop: " + dhcp4_config.get_one_option("next_server");
+            }
+            this.notifications.show('DHCP changed',
+                notifObject,
+                Constants.ICON_SECURITY_LOW,
+                Tray.Urgency.CRITICAL,
+                this.notifications.TYPE_DHCP_CHANGE
+            );
+        }
+        catch(e){
+            global.log("DHCP error", e.message);
+        }
+    },
 
     /**
      * Adds a new device to the list
+     *
      */
     add_device: function(dev){
         if (this.pref_max_items_in_list !== 0 && this.menu._getMenuItems().length > this.pref_max_items_in_list){

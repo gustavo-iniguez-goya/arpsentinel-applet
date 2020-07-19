@@ -1,6 +1,6 @@
 /**
     ARP Sentinel applet for cinnamon panel
-    Copyright (C) 2017 Gustavo Iñiguez Goia
+    Copyright (C) 2017-2020 Gustavo Iñiguez Goia
 
     This program is free software = you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
 */
 const AppletUUID = 'arpsentinel@arpsentinel-applet.github.io';
 
-const NMClient = imports.gi.NMClient;
-const NetworkManager = imports.gi.NetworkManager;
+const Gio = imports.gi.Gio;
+const NetworkManager = imports.gi.NM;
 const Lang = imports.lang;
 
 /* local imports */
@@ -36,20 +36,32 @@ ArpSentinel.prototype = {
         this.macs = [];
         this.alerts = [];
         this.show_alerts = [];
-        this.show_alerts.push(Constants.ALERT_IP_CHANGE);
+        /*this.show_alerts.push(Constants.ALERT_IP_CHANGE);
         this.show_alerts.push(Constants.ALERT_UNAUTH_ARP);
         this.show_alerts.push(Constants.ALERT_TOO_MUCH_ARP);
         this.show_alerts.push(Constants.ALERT_GLOBAL_FLOOD);
         this.show_alerts.push(Constants.ALERT_ETHER_NOT_ARP);
         this.show_alerts.push(Constants.ALERT_MAC_BL);
         this.show_alerts.push(Constants.ALERT_MAC_NOT_WL);
-        this.show_alerts.push(Constants.ALERT_MAC_NEW);
         this.show_alerts.push(Constants.ALERT_MAC_CHANGE);
         this.show_alerts.push(Constants.ALERT_MAC_EXPIRED);
         this.show_alerts.push(Constants.ALERT_IP_DUPLICATED);
+        */
+        this.show_alerts.push(Constants.ALERT_MAC_NEW);
         this.current_alert_level = Constants.ALERT_NONE;
 
-        this._client = NMClient.Client.new();
+        this._on_nm_client_acquired = undefined;
+        NetworkManager.Client.new_async(null, Lang.bind(this, this._init_nm_client));
+        this._resolver = Gio.Resolver.get_default();
+    },
+
+    _init_nm_client: function(obj, result){
+        this._client = NetworkManager.Client.new_finish(result);
+        this._on_nm_client_acquired(this._client);
+    },
+
+    on_nm_client: function(callback){
+        this._on_nm_client_acquired = callback;
     },
 
     /**
@@ -57,7 +69,32 @@ ArpSentinel.prototype = {
      *
      */
     get_connectivity: function(){
-        return this._client.get_connectivity();
+        return (this._client !== undefined) ? this._client.get_connectivity() : undefined;
+    },
+
+    /**
+     * React to DHCP changes
+     *
+     * @param {function} callback - return the new connectivity state
+     */
+    on_dhcp_change: function(callback){
+        if (this._client === undefined){
+            return;
+        }
+        this._devices = this._client.get_devices();
+        for (let i=0,len=this._devices.length; i < len;i++){
+            if (this._devices[i].get_iface() === 'lo'){
+                continue;
+            }
+            this._devices[i].connect('notify::dhcp4-config', Lang.bind(this,
+                function(_dev, new_config, old_config, data){
+                    callback(_dev, new_config, old_config, data);
+            }));
+            this._devices[i].connect('notify::dhcp6-config', Lang.bind(this,
+                function(_dev, new_config, old_config, data){
+                    callback(_dev, new_config, old_config, data);
+            }));
+        }
     },
 
     /**
@@ -66,11 +103,16 @@ ArpSentinel.prototype = {
      * @param {function} callback - return the new connectivity state
      */
     on_connectivity_change: function(callback){
+        if (this._client === undefined){
+            return;
+        }
+
         this._devices = this._client.get_devices();
         for (let i=0,len=this._devices.length; i < len;i++){
             if (this._devices[i].get_iface() === 'lo'){
                 continue;
             }
+            // https://github.com/NetworkManager/NetworkManager/blob/master/clients/cli/connections.c#L2654
             this._devices[i].connect('state-changed', Lang.bind(this,
                 function(_dev, new_state, old_state, reason){
                     callback(_dev, this._client.get_connectivity());
@@ -88,6 +130,10 @@ ArpSentinel.prototype = {
      */
     buildAlert: function(data, pos, pos_dev, dupe_dev, callback) {
         let _icon = Constants.ICON_SECURITY_LOW;
+        var pos_dev = this.get_device_by_mac(data.mac);
+        if (pos_dev !== -1 && this.is_alert_id_enabled(data.type) === false){
+            return;
+        }
         
         if (data.type === Constants.ALERT_GLOBAL_FLOOD || 
                 data.type == Constants.ALERT_ETHER_NOT_ARP || 
@@ -106,23 +152,27 @@ ArpSentinel.prototype = {
         switch(data.type){
             case Constants.ALERT_IP_CHANGE:
                 alert_text = 'IP Change';
-                pos_dev = this.get_device_by_mac(data.mac);
-                if (pos_dev > -1 && this.macs[pos_dev].ip !== data.ip){
-                    _alert_text = this._track_ip_changes(pos_dev, data);
-                    if (_alert_text !== null){
-                        alert_text = _alert_text;
+                if (pos_dev > -1){
+                    if (this.macs[pos_dev].ip !== data.ip){
+                        _alert_text = this._track_ip_changes(pos_dev, data);
+                        if (_alert_text !== null){
+                            alert_text = _alert_text;
+                        }
+                        this.macs[pos_dev] = data;
+                    } else if (this.macs[pos_dev].ip === data.ip && this.macs[pos_dev].mac === data.mac ){
+                        alert_text = 'IP Change (possible ARP Spoofing running)';
                     }
-                    this.macs[pos_dev] = data;
                 }
                 break;
             case Constants.ALERT_MAC_NOT_WL:
-                alert_text = 'Unknown';
-                pos_dev = this.get_device_by_mac(data.mac);
-                if (pos_dev > -1 && this.macs[pos_dev].ip === data.ip && 
-                         this.macs[pos_dev].mac === data.mac){
-                    return;
+                var alert_text = 'Unknown';
+                if (this.macs[pos_dev] !== undefined){
+                    if (pos_dev > -1 && this.macs[pos_dev].ip === data.ip &&
+                             this.macs[pos_dev].mac === data.mac){
+                        return;
+                    }
                 }
-                _alert_text = this._track_ip_changes(pos_dev, data);
+                var _alert_text = this._track_ip_changes(pos_dev, data);
                 if (_alert_text !== null){
                     alert_text = _alert_text;
                     data.type = Constants.ALERT_IP_CHANGE;
@@ -154,6 +204,11 @@ ArpSentinel.prototype = {
             case Constants.ALERT_ETHER_NOT_ARP:
                 alert_text = 'Possible ARP spoof, MAC ether != arp';
                 // TODO = add visual warning, check out arp -n, etc
+                let dev = this._check_arp_table(data);
+                if (false !== dev){
+                    global.log("ARP POISONING", dev);
+                    alert_text += "\n" + dev.ip + " - " + dev.mac;
+                }
                 break;
             case Constants.ALERT_GLOBAL_FLOOD:
                 alert_text = 'Global floood';
@@ -164,7 +219,6 @@ ArpSentinel.prototype = {
                 // XXX = arpalert detects MAC CHANGEs, for example when it has saved a IP-MAC,
                 // and later the DHCP decides to give the same IP to another device.
                 alert_text = 'MAC change';
-                pos_dev = this.get_device_by_mac(data.mac);
                 if (pos_dev > -1 && this.macs[pos_dev].mac !== data.mac){
                     alert_text = 'MAC CHANGE (previous: ' + this.macs[pos_dev].mac + ')';
                 }
@@ -186,9 +240,34 @@ ArpSentinel.prototype = {
             default:
                 alert_text = 'Unknown event';
         }
+
+        //data = this._resolve_ip(data);
+
         callback(alert_text + ': ' + data.mac, data, _icon);
     },
 
+    _resolve_ip: function(data){
+        try{
+            if (data.ip !== '0.0.0.0'){
+                let _ip = Gio.InetAddress.new_from_string(data.ip);
+                //data.netname = this._resolver.lookup_by_address(_ip, null);
+                let resolver = this._resolver;
+                this._resolver.lookup_by_address_async(_ip, null, (x, res) => {
+                    try{
+                        data.netname = resolver.lookup_by_address_finish(res);
+                        global.log("Host: " + data.netname);
+                    }
+                    catch(e){
+                        global.log("resolver error: %s\n", e.message);
+                    }
+                });
+            }
+        }
+        catch(e){
+            global.log("_resolve_ip error" + e)
+        }
+        return data;
+    },
 
     /**
      * Track IP changes of the devices.
@@ -280,6 +359,21 @@ ArpSentinel.prototype = {
         return (this.show_alerts.indexOf(_alert_id) === -1) ? false : true;
     },
 
+    add_pref_alert: function(_alert_id){
+        let pos = this.show_alerts.indexOf(_alert_id);
+        if (pos !== -1){
+            return
+        }
+        this.show_alerts.push(_alert_id);
+    },
+
+    remove_pref_alert: function(_alert_id){
+        let pos = this.show_alerts.indexOf(_alert_id);
+        if (pos !== -1){
+            this.show_alerts.splice(pos, 1);
+        }
+    },
+
     set_alert_level: function(_alert_id){
         this.current_alert_level = _alert_id;
     },
@@ -360,6 +454,25 @@ ArpSentinel.prototype = {
             let ret = this.macs.slice(idx,1);
    //         this.update_devices_list();
             return ret;
+        }
+        return false;
+    },
+
+    /**
+     * Removes a device from the list by its MAC address.
+     *
+     */
+    check_arp_table: function(mac){
+        let file = Gio.file_new_for_path("/proc/net/arp");
+        let [result, content, etag] = file.load_contents(null);
+        for (let s of content.toString().split('\n')){
+            let match = new RegExp('([0-9\.]+).+([A-Za-z0-9\:]{17}).*').exec(s);
+            if (match){
+                let dev = {ip: match[1], mac: match[2]};
+                if (false !== Actions.is_whitelisted(dev)){
+                    return dev;
+                }
+            }
         }
         return false;
     },

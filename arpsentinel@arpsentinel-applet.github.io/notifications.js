@@ -1,6 +1,6 @@
 /**
     ARP Sentinel applet for cinnamon panel
-    Copyright (C) 2017 Gustavo Iñiguez Goia
+    Copyright (C) 2017-2020 Gustavo Iñiguez Goia
 
     This program is free software = you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,6 +34,8 @@ function Notifications(){
     this.TYPE_IP_DUPLICATED  = 1;
     this.TYPE_MAX_DEVICES    = 2;
     this.TYPE_TRUSTED_CHANGE = 3;
+    this.TYPE_WIFI_CHANGE    = 4;
+    this.TYPE_DHCP_CHANGE    = 5;
     this.TYPE_ARP_SPOOFING   = 10;
     this.TYPE_GLOBAL_FLOOD   = 10;
     this.TYPE_MITM           = 10;
@@ -46,32 +48,35 @@ function Notifications(){
     /**
      * Show a notification to the user
      *
-     * @param {string} _title - Title of the notification
-     * @param {string} _body - Body of the notification
+     * @param {string} _title   - Title of the notification
+     * @param {string} _body    - Body of the notification
      * @param {string} _ic_name - Icon name
      * @param {string} _urgency - Notification urgency
-     * @param {number} _type - Notification type
+     * @param {number} _type    - Notification type
      */
     this.show = function(_title, _body, _ic_name, _urgency, _type){
-        if (this.notif_active === _type){
-            global.log('ACTIVE: ' + _type);
-            return;
+        try{
+            if (this.notif_active === _type){
+                return;
+            }
+            let not = new Tray.Notification(this._notif_src, _title, _body,
+                {
+                    bodyMarkup: true,
+                    //bannerMarkup: true,
+                    icon:  new St.Icon({ icon_name: _ic_name,
+                                 icon_type: St.IconType.SYMBOLIC,
+                                 icon_size: 24 })
+                });
+            // make the notification not auto hide
+            not.setUrgency(_urgency);
+            not.connect('clicked', Lang.bind(this, function(){
+                this.notif_active = this.NONE;
+            }));
+            this._notif_src.notify(not);
+            this.notif_active = _type;
+        } catch(e) {
+            global.log("notifications.show() error: " + e.message);
         }
-        let not = new Tray.Notification(this._notif_src, _title, _body, 
-            {
-                bodyMarkup: true,
-                bannerMarkup: true,
-                icon:  new St.Icon({ icon_name: _ic_name,
-                             icon_type: St.IconType.SYMBOLIC,
-                             icon_size: 24 })
-            });
-        // make the notification not auto hide
-        not.setUrgency(_urgency);
-        not.connect('clicked', Lang.bind(this, function(){
-            this.notif_active = this.NONE;
-        }));
-        this._notif_src.notify(not);
-        this.notif_active = _type;
     };
     
     this.show_warning = function(_title, _body, _ic_name){

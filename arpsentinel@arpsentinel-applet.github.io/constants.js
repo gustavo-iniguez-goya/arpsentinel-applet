@@ -1,6 +1,6 @@
 /**
     ARP Sentinel applet for cinnamon panel
-    Copyright (C) 2017 Gustavo Iñiguez Goia
+    Copyright (C) 2017-2020 Gustavo Iñiguez Goia
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,67 +15,67 @@
     You should have received a copy of the GNU General Public License
  */
 
-const GLib = imports.gi.GLib;
+var GLib = imports.gi.GLib;
 
-const AppletUUID = 'arpsentinel@arpsentinel-applet.github.io';
-const AppletName = 'arpsentinel-applet';
+var AppletUUID = 'arpsentinel@arpsentinel-applet.github.io';
+var AppletName = 'arpsentinel-applet';
 
-const SIGNAL_EVENTS_METHOD      =   'getAlert';
+var SIGNAL_EVENTS_METHOD      =   'getAlert';
 
-const POLICY_IGNORE_IPCHANGE    =   'ip_change';
-const POLICY_IGNORE_BLISTED     =   'black_listed';
-const POLICY_IGNORE_UNAUTH      =   'unauth_rq';
-const POLICY_IGNORE_ABUSE       =   'rq_abus';
-const POLICY_IGNORE_MAC_ERROR   =   'mac_error';
-const POLICY_IGNORE_MAC_CHANGE  =   'mac_change';
+var POLICY_IGNORE_IPCHANGE    =   'ip_change';
+var POLICY_IGNORE_BLISTED     =   'black_listed';
+var POLICY_IGNORE_UNAUTH      =   'unauth_rq';
+var POLICY_IGNORE_ABUSE       =   'rq_abus';
+var POLICY_IGNORE_MAC_ERROR   =   'mac_error';
+var POLICY_IGNORE_MAC_CHANGE  =   'mac_change';
 
-const PREF_HARDENING_MODE   = 'hardening_mode';
-const PREF_MAX_DEVICES      = 'max_devices';
-const PREF_MAX_ITEMS_IN_LIST = 'max_items_in_list';
-const PREF_CHECK_HTTPS      = 'check_https';
-const PREF_HTTPS_INTERVAL   = 'https_interval';
-const PREF_HTTPS_DOMAINS    = 'https_domains';
-const PREF_BLOCK_COMMAND    = 'block_command';
-const PREF_ALERT_IP_CHANGE  = 'alert_ip_change';
-const PREF_ALERT_MAC_NOT_WL = 'alert_mac_not_wl';
-const PREF_ALERT_WHITELISTED = 'alert_whitelisted';
-const PREF_WHITELISTED_DEVS = 'whitelisted_devices';
-const PREF_ALERT_MAC_BL     = 'alert_mac_bl';
-const PREF_ALERT_MAC_NEW    = 'alert_mac_new';
-const PREF_ALERT_UNAUTH_ARP = 'alert_unauth_arp';
-const PREF_ALERT_TOO_MUCH_ARP  = 'alert_too_much_arp';
-const PREF_ALERT_ETHER_NOT_ARP = 'alert_ether_not_arp';
-const PREF_ALERT_GLOBAL_FLOOD  = 'alert_global_flood';
-const PREF_ALERT_MAC_CHANGE    = 'alert_mac_change';
-const PREF_ALERT_MAC_EXPIRED   = 'alert_mac_expired';
+var PREF_HARDENING_MODE   = 'hardening_mode';
+var PREF_MAX_DEVICES      = 'max_devices';
+var PREF_MAX_ITEMS_IN_LIST = 'max_items_in_list';
+var PREF_CHECK_HTTPS      = 'check_https';
+var PREF_HTTPS_INTERVAL   = 'https_interval';
+var PREF_HTTPS_DOMAINS    = 'https_domains';
+var PREF_BLOCK_COMMAND    = 'block_command';
+var PREF_ALERT_IP_CHANGE  = 'alert_ip_change';
+var PREF_ALERT_MAC_NOT_WL = 'alert_mac_not_wl';
+var PREF_ALERT_WHITELISTED = 'alert_whitelisted';
+var PREF_WHITELISTED_DEVS = 'whitelisted_devices';
+var PREF_ALERT_MAC_BL     = 'alert_mac_bl';
+var PREF_ALERT_MAC_NEW    = 'alert_mac_new';
+var PREF_ALERT_UNAUTH_ARP = 'alert_unauth_arp';
+var PREF_ALERT_TOO_MUCH_ARP  = 'alert_too_much_arp';
+var PREF_ALERT_ETHER_NOT_ARP = 'alert_ether_not_arp';
+var PREF_ALERT_GLOBAL_FLOOD  = 'alert_global_flood';
+var PREF_ALERT_MAC_CHANGE    = 'alert_mac_change';
+var PREF_ALERT_MAC_EXPIRED   = 'alert_mac_expired';
 
-const AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
-const ARPSENTINEL_HOME = AppletDir + '/data';
-const MACLIST_BL = GLib.get_home_dir() + '/.' + AppletName +'/maclist.deny';
-const MACLIST_WL = GLib.get_home_dir() + '/.'+ AppletName + '/maclist.allow';
+var AppletDir = imports.ui.appletManager.appletMeta[AppletUUID].path;
+var ARPSENTINEL_HOME = AppletDir + '/data';
+var MACLIST_BL = GLib.get_home_dir() + '/.' + AppletName +'/maclist.deny';
+var MACLIST_WL = GLib.get_home_dir() + '/.'+ AppletName + '/maclist.allow';
 
-const ALERT_NONE      =     '-1';
-const ALERT_IP_CHANGE =     '0';
+var ALERT_NONE      =     '-1';
+var ALERT_IP_CHANGE =     '0';
 // XXX: action -> add to whitelist
 // XXX: action -> add to blacklist
-const ALERT_MAC_NOT_WL =    '1';
+var ALERT_MAC_NOT_WL =    '1';
 // XXX: action -> add to whitelist
-const ALERT_MAC_BL =        '2';
-const ALERT_MAC_NEW =       '3';
-const ALERT_UNAUTH_ARP =    '4';
-const ALERT_TOO_MUCH_ARP =  '5';
+var ALERT_MAC_BL =        '2';
+var ALERT_MAC_NEW =       '3';
+var ALERT_UNAUTH_ARP =    '4';
+var ALERT_TOO_MUCH_ARP =  '5';
 // this alert is fired when someone performs an arp spoofing
 // arpsoof -t <vicimt_ip> <gw_ip>
-const ALERT_ETHER_NOT_ARP = '6';
+var ALERT_ETHER_NOT_ARP = '6';
 // XXX: test this, and auto add a blocking rule
-const ALERT_GLOBAL_FLOOD =  '7';
-const ALERT_MAC_CHANGE =    '9';
-const ALERT_MAC_EXPIRED =   '10';
-const ALERT_IP_DUPLICATED =   '100';
+var ALERT_GLOBAL_FLOOD =  '7';
+var ALERT_MAC_CHANGE =    '9';
+var ALERT_MAC_EXPIRED =   '10';
+var ALERT_IP_DUPLICATED =   '100';
 
-const ALERT_STATUS_NORMAL = '0';
+var ALERT_STATUS_NORMAL = '0';
 
-const ICON_DIALOG_WARNING = 'dialog-warning';
-const ICON_SECURITY_LOW = 'security-low';
-const ICON_SECURITY_MEDIUM = 'security-medium';
-const ICON_SECURITY_HIGH = 'security-high';
+var ICON_DIALOG_WARNING = 'dialog-warning';
+var ICON_SECURITY_LOW = 'security-low';
+var ICON_SECURITY_MEDIUM = 'security-medium';
+var ICON_SECURITY_HIGH = 'security-high';
